@@ -12,6 +12,9 @@
         <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
         <link rel="stylesheet" href="css/fontawesome-all.min.css">
         
+        <!-- Chart.js CDN for Dynamic Graphs -->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
         <title>Tongatapu Infrastructure Asset Replacement Cost Valuation</title>
         
         <style>
@@ -22,7 +25,7 @@
                 margin: 0;
                 overflow: hidden;
                 font-family: Arial, Helvetica, sans-serif;
-                background-color: #ffffff;
+                background-color: #f4f6f9;
             }
 
             /* Custom Header / Title Banner */
@@ -49,57 +52,74 @@
                 font-weight: normal;
             }
 
-            /* Responsive Map Container */
-            #map {
+            /* Main Layout Container (Flexbox for Map + Side Panel) */
+            .main-container {
+                display: flex;
                 width: 100vw;
                 height: calc(100vh - 75px);
             }
 
-            /* Popup Styling */
-            .leaflet-popup-content-wrapper {
-                border-radius: 10px !important;
-                padding: 6px !important;
-                box-shadow: 0 4px 16px rgba(0,0,0,0.2) !important;
-            }
-            .leaflet-popup-content {
-                margin: 8px 12px !important;
-                min-width: 250px;
+            #map {
+                flex: 1;
+                height: 100%;
             }
 
-            .popup-title {
-                color: #0066b2;
-                font-size: 14px;
+            /* Analytics & Summary Dashboard Sidebar */
+            .dashboard-panel {
+                width: 380px;
+                height: 100%;
+                background: #ffffff;
+                border-left: 1px solid #dcdcdc;
+                box-sizing: border-box;
+                padding: 15px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
+            }
+
+            .dash-header {
+                font-size: 15px;
                 font-weight: bold;
+                color: #0066b2;
                 border-bottom: 1px solid #e0e0e0;
-                padding-bottom: 6px;
-                margin-bottom: 6px;
+                padding-bottom: 8px;
+                margin-bottom: 10px;
             }
 
-            .popup-hint {
-                font-size: 11px;
+            .dash-hint {
+                font-size: 11.5px;
                 color: #666;
-                margin-bottom: 8px;
+                margin-bottom: 12px;
                 font-style: italic;
+            }
+
+            .chart-container {
+                position: relative;
+                width: 100%;
+                height: 220px;
+                margin-bottom: 15px;
             }
 
             .popup-table {
                 width: 100%;
                 border-collapse: collapse;
                 font-size: 12px;
+                margin-bottom: 10px;
             }
 
             .popup-table th {
                 text-align: left;
                 color: #444;
                 font-weight: 600;
-                padding: 3px 0;
+                padding: 4px 0;
             }
 
             .popup-table td {
                 text-align: right;
                 color: #0066b2;
                 font-weight: bold;
-                padding: 3px 0;
+                padding: 4px 0;
             }
 
             .popup-table tr.total-row {
@@ -115,12 +135,11 @@
             }
 
             .btn-clear {
-                margin-top: 10px;
                 width: 100%;
                 background: #d9534f;
                 color: #ffffff;
                 border: none;
-                padding: 6px;
+                padding: 8px;
                 border-radius: 5px;
                 font-weight: bold;
                 cursor: pointer;
@@ -137,8 +156,28 @@
             <p class="map-subtitle">Infrastructure Exposure Modelling | Tongatapu - Tonga</p>
         </header>
 
-        <!-- Map Container -->
-        <div id="map"></div>
+        <!-- Main Body: Map & Dynamic Analytics Sidebar -->
+        <div class="main-container">
+            <div id="map"></div>
+            
+            <div class="dashboard-panel">
+                <div>
+                    <div class="dash-header" id="dash-title">Selection Summary (0 Grids)</div>
+                    <div class="dash-hint">Shift + Click on map grids to select and calculate statistics.</div>
+                    
+                    <div class="chart-container">
+                        <canvas id="assetChart"></canvas>
+                    </div>
+                </div>
+
+                <div>
+                    <table class="popup-table" id="dash-table">
+                        <tr><td colspan="2" style="text-align:center; color:#888;">No selection made</td></tr>
+                    </table>
+                    <button class="btn-clear" id="btn-clear-selection" style="display:none;">Clear Selection</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Essential Leaflet & Plugin Scripts -->
         <script src="js/qgis2web_expressions.js"></script>
@@ -156,8 +195,7 @@
         var map = L.map('map', {
             zoomControl: false, 
             maxZoom: 28, 
-            minZoom: 1,
-            closePopupOnClick: false // Prevents clicks from auto-closing popups
+            minZoom: 1
         }).fitBounds([[-21.277770517040558, -175.39660559586346], [-21.05675229650531, -174.97404585621942]]);
 
         var hash = new L.Hash(map);
@@ -178,7 +216,7 @@
         });
         map.addLayer(layer_ESRISatellite_0);
 
-        // 3. Number Parsing & Currency Helpers
+        // 3. Helpers
         function safeNum(val) {
             if (val === null || val === undefined) return 0;
             if (typeof val === 'number') return isNaN(val) ? 0 : val;
@@ -191,7 +229,7 @@
             return '$' + safeNum(val).toLocaleString('en-US', { maximumFractionDigits: 0 });
         }
 
-        // 4. Data Fields Mapping
+        // 4. Field Map Configuration (Excluding Total for individual chart segments)
         var fieldMap = [
             { key: 'Building_Allocated_RC_Raw', label: 'Building Cost' },
             { key: 'Fuel_Allocated_RC_Raw', label: 'Fuel Facilities' },
@@ -202,71 +240,129 @@
             { key: 'Poles_Allocated_RC_Raw', label: 'Power Poles' },
             { key: 'Telecom_Allocated_RC_Raw', label: 'Telecom' },
             { key: 'Power_Assets_Allocated_RC_Raw', label: 'Power Assets' },
-            { key: 'Water_Allocated_RC_Raw', label: 'Water Assets' },
-            { key: 'Total_Replacement_Cost_Raw', label: 'Total Replacement Cost', isTotal: true }
+            { key: 'Water_Allocated_RC_Raw', label: 'Water Assets' }
         ];
 
-        // 5. Multi-Select State Management
+        // 5. Initialize Chart.js Bar Graph
+        var ctx = document.getElementById('assetChart').getContext('2d');
+        var assetChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: fieldMap.map(f => f.label),
+                datasets: [{
+                    label: 'Share (%)',
+                    data: new Array(fieldMap.length).fill(0),
+                    backgroundColor: '#1a5b8c',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: { callback: function(value) { return value + '%'; } }
+                    },
+                    x: {
+                        ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var rawVal = context.chart.rawValues ? context.chart.rawValues[context.dataIndex] : 0;
+                                return ' Value: ' + formatCurrency(rawVal) + ' (' + context.raw.toFixed(1) + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 6. State Management & Dashboard Updater
         var selectedLayers = [];
-        var activePopup = L.popup({ autoClose: false, closeOnClick: false });
 
         function clearSelections() {
             selectedLayers.forEach(function(l) {
                 layer_AssetsreplacementcostUSD_1.resetStyle(l);
             });
             selectedLayers = [];
-            map.closePopup(activePopup);
+            updateDashboard();
         }
 
-        function updateSummaryPopup(latlng) {
+        function updateDashboard() {
+            var dashTitle = document.getElementById('dash-title');
+            var dashTable = document.getElementById('dash-table');
+            var clearBtn = document.getElementById('btn-clear-selection');
+
             if (selectedLayers.length === 0) {
-                map.closePopup(activePopup);
+                dashTitle.innerText = 'Selection Summary (0 Grids)';
+                dashTable.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#888;">No selection made</td></tr>';
+                clearBtn.style.display = 'none';
+                
+                // Reset chart data
+                assetChart.data.datasets[0].data = new Array(fieldMap.length).fill(0);
+                assetChart.rawValues = new Array(fieldMap.length).fill(0);
+                assetChart.update();
                 return;
             }
 
+            dashTitle.innerText = selectedLayers.length === 1 
+                ? 'Cell #' + (selectedLayers[0].feature.properties['fid'] || 'N/A') + ' Summary'
+                : 'Selected Grids Summary (' + selectedLayers.length + ' Grids)';
+
+            clearBtn.style.display = 'block';
+
+            // Accumulate values
             var totals = {};
+            var grandTotal = 0;
             fieldMap.forEach(function(item) { totals[item.key] = 0; });
 
             selectedLayers.forEach(function(layer) {
                 var props = layer.feature.properties;
                 fieldMap.forEach(function(item) {
-                    totals[item.key] += safeNum(props[item.key]);
+                    var val = safeNum(props[item.key]);
+                    totals[item.key] += val;
+                    grandTotal += val;
                 });
             });
 
-            var headerText = selectedLayers.length === 1 
-                ? 'Asset Valuation Details (Cell #' + (selectedLayers[0].feature.properties['fid'] || 'N/A') + ')'
-                : 'Selected Grids Summary (' + selectedLayers.length + ' Grids)';
-
-            var rows = '';
-            fieldMap.forEach(function(item) {
-                var rowClass = item.isTotal ? 'class="total-row"' : '';
-                rows += '<tr ' + rowClass + '><th>' + item.label + '</th><td>' + formatCurrency(totals[item.key]) + '</td></tr>';
+            // Calculate overall total replacement cost
+            var totalReplacementCost = 0;
+            selectedLayers.forEach(function(layer) {
+                totalReplacementCost += safeNum(layer.feature.properties['Total_Replacement_Cost_Raw']);
             });
 
-            var clearBtn = '<button id="btn-clear-selection" class="btn-clear">Clear Selection</button>';
+            // Build table rows
+            var rows = '';
+            var percentages = [];
+            var rawValues = [];
 
-            var popupContent = '<div class="popup-title">' + headerText + '</div>' +
-                               '<div class="popup-hint">Shift + Click on grids to multi-select</div>' +
-                               '<table class="popup-table">' + rows + '</table>' +
-                               clearBtn;
+            fieldMap.forEach(function(item) {
+                var val = totals[item.key];
+                rawValues.push(val);
+                var pct = grandTotal > 0 ? (val / grandTotal) * 100 : 0;
+                percentages.push(pct);
 
-            activePopup.setLatLng(latlng).setContent(popupContent).openOn(map);
+                rows += '<tr><th>' + item.label + '</th><td>' + formatCurrency(val) + ' <span style="font-size:10px; color:#666;">(' + pct.toFixed(1) + '%)</span></td></tr>';
+            });
 
-            // Bind click listener after popup DOM element renders
-            setTimeout(function() {
-                var btn = document.getElementById('btn-clear-selection');
-                if (btn) {
-                    btn.onclick = function() {
-                        clearSelections();
-                    };
-                }
-            }, 50);
+            // Add total row
+            rows += '<tr class="total-row"><th>Total Cost</th><td>' + formatCurrency(totalReplacementCost) + '</td></tr>';
+            dashTable.innerHTML = rows;
+
+            // Update Chart Data & Percentages
+            assetChart.data.datasets[0].data = percentages;
+            assetChart.rawValues = rawValues;
+            assetChart.update();
         }
 
         function onGridClick(e) {
-            L.DomEvent.stopPropagation(e); // Stop event propagation to base map
-            
+            L.DomEvent.stopPropagation(e);
             var layer = e.target;
             var isShiftPressed = e.originalEvent && e.originalEvent.shiftKey;
             var index = selectedLayers.indexOf(layer);
@@ -287,10 +383,10 @@
                 layer.setStyle({ stroke: true, color: '#FFD700', weight: 3, opacity: 1 });
             }
 
-            updateSummaryPopup(e.latlng);
+            updateDashboard();
         }
 
-        // 6. Color Classification
+        // 7. Styling & Layers
         function getColor(val) {
             return val > 7374635.36 ? 'rgba(8,48,107,0.75)' :
                    val > 1997189.87 ? 'rgba(41,121,185,0.75)' :
@@ -299,7 +395,6 @@
                                       'rgba(224,238,252,0.75)';
         }
 
-        // 7. Layer Polygon Styling
         function style_AssetsreplacementcostUSD_1_0(feature) {
             var cost = feature.properties['Total_Replacement_Cost_Raw'] || 0;
             return {
@@ -315,7 +410,6 @@
             };
         }
 
-        // 8. Create Vector Layer & Bind Events
         map.createPane('pane_AssetsreplacementcostUSD_1');
         map.getPane('pane_AssetsreplacementcostUSD_1').style.zIndex = 401;
 
@@ -345,12 +439,15 @@
 
         map.addLayer(layer_AssetsreplacementcostUSD_1);
 
-        // Clear active selection on background map click
         map.on('click', function(e) {
             clearSelections();
         });
 
-        // 9. Layer Control Box
+        document.getElementById('btn-clear-selection').onclick = function() {
+            clearSelections();
+        };
+
+        // 8. Layer Control Box
         var overlaysTree = [
             {
                 label: 'Assets replacement cost (USD)<br />' +
