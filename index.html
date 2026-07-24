@@ -63,7 +63,7 @@
             }
             .leaflet-popup-content {
                 margin: 8px 12px !important;
-                min-width: 220px;
+                min-width: 240px;
             }
 
             .popup-title {
@@ -73,6 +73,13 @@
                 border-bottom: 1px solid #e0e0e0;
                 padding-bottom: 6px;
                 margin-bottom: 8px;
+            }
+
+            .popup-hint {
+                font-size: 11px;
+                color: #666;
+                margin-bottom: 8px;
+                font-style: italic;
             }
 
             .popup-table {
@@ -106,6 +113,21 @@
                 font-weight: 700;
                 color: #111;
             }
+
+            .btn-clear {
+                margin-top: 10px;
+                width: 100%;
+                background: #d9534f;
+                color: #ffffff;
+                border: none;
+                padding: 6px;
+                border-radius: 6px;
+                font-weight: bold;
+                cursor: pointer;
+            }
+            .btn-clear:hover {
+                background: #c9302c;
+            }
         </style>
     </head>
     <body>
@@ -130,7 +152,7 @@
         <script src="data/AssetsreplacementcostUSD_1.js"></script>
 
         <script>
-        // 1. Initialize Map with Full Viewport Bounds
+        // 1. Initialize Map
         var map = L.map('map', {
             zoomControl: false, 
             maxZoom: 28, 
@@ -155,13 +177,20 @@
         });
         map.addLayer(layer_ESRISatellite_0);
 
-        // 3. Helper Functions: Number & Currency Formatting
-        function formatCurrency(val) {
-            if (val === null || val === undefined || isNaN(val)) return '$0';
-            return '$' + Number(val).toLocaleString('en-US', { maximumFractionDigits: 0 });
+        // 3. Number Parsing & Currency Formatting Helpers
+        function safeNum(val) {
+            if (val === null || val === undefined) return 0;
+            if (typeof val === 'number') return isNaN(val) ? 0 : val;
+            var clean = String(val).replace(/[^0-9.-]+/g, "");
+            var n = parseFloat(clean);
+            return isNaN(n) ? 0 : n;
         }
 
-        // 4. Clean Field Configuration for Popups
+        function formatCurrency(val) {
+            return '$' + safeNum(val).toLocaleString('en-US', { maximumFractionDigits: 0 });
+        }
+
+        // 4. Clean Field Configurations
         var fieldMap = [
             { key: 'Building_Allocated_RC_Raw', label: 'Building Cost' },
             { key: 'Fuel_Allocated_RC_Raw', label: 'Fuel Facilities' },
@@ -176,38 +205,85 @@
             { key: 'Total_Replacement_Cost_Raw', label: 'Total Replacement Cost', isTotal: true }
         ];
 
-        // 5. Popup Generator & Interactivity Events
-        function pop_AssetsreplacementcostUSD_1(feature, layer) {
-            var fid = feature.properties['fid'] ? ' (Cell #' + feature.properties['fid'] + ')' : '';
-            var rows = '';
+        // 5. Multi-Select State Management
+        var selectedLayers = [];
+        var activePopup = L.popup({ autoClose: false, closeOnClick: false });
 
-            fieldMap.forEach(function(item) {
-                var val = feature.properties[item.key];
-                var rowClass = item.isTotal ? 'class="total-row"' : '';
-                rows += '<tr ' + rowClass + '><th>' + item.label + '</th><td>' + formatCurrency(val) + '</td></tr>';
+        function clearSelections() {
+            selectedLayers.forEach(function(l) {
+                layer_AssetsreplacementcostUSD_1.resetStyle(l);
             });
-
-            var popupContent = '<div class="popup-title">Asset Valuation Details' + fid + '</div>' +
-                               '<table class="popup-table">' + rows + '</table>';
-
-            layer.bindPopup(popupContent, { maxHeight: 380 });
-
-            // Hover Highlight Effect
-            layer.on({
-                mouseover: function(e) {
-                    var l = e.target;
-                    l.setStyle({ weight: 2, color: '#FFD700', opacity: 1 });
-                    if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-                        l.bringToFront();
-                    }
-                },
-                mouseout: function(e) {
-                    layer_AssetsreplacementcostUSD_1.resetStyle(e.target);
-                }
-            });
+            selectedLayers = [];
+            map.closePopup();
         }
 
-        // 6. Color Classifier Helper
+        function updateSummaryPopup(latlng) {
+            if (selectedLayers.length === 0) {
+                map.closePopup();
+                return;
+            }
+
+            // Initialize total accumulator object
+            var totals = {};
+            fieldMap.forEach(function(item) { totals[item.key] = 0; });
+
+            // Accumulate values across all selected features
+            selectedLayers.forEach(function(layer) {
+                var props = layer.feature.properties;
+                fieldMap.forEach(function(item) {
+                    totals[item.key] += safeNum(props[item.key]);
+                });
+            });
+
+            // Header title based on selection count
+            var headerText = selectedLayers.length === 1 
+                ? 'Asset Valuation Details (Cell #' + (selectedLayers[0].feature.properties['fid'] || 'N/A') + ')'
+                : 'Selected Grids Summary (' + selectedLayers.length + ' Grids)';
+
+            // Build popup HTML table
+            var rows = '';
+            fieldMap.forEach(function(item) {
+                var rowClass = item.isTotal ? 'class="total-row"' : '';
+                rows += '<tr ' + rowClass + '><th>' + item.label + '</th><td>' + formatCurrency(totals[item.key]) + '</td></tr>';
+            });
+
+            var clearBtn = selectedLayers.length > 0 
+                ? '<button class="btn-clear" onclick="clearSelections()">Clear Selection</button>' 
+                : '';
+
+            var popupContent = '<div class="popup-title">' + headerText + '</div>' +
+                               '<div class="popup-hint">Shift + Click on grids to add/remove from selection</div>' +
+                               '<table class="popup-table">' + rows + '</table>' +
+                               clearBtn;
+
+            activePopup.setLatLng(latlng).setContent(popupContent).openOn(map);
+        }
+
+        function onGridClick(e) {
+            var layer = e.target;
+            var isShiftPressed = e.originalEvent && e.originalEvent.shiftKey;
+            var index = selectedLayers.indexOf(layer);
+
+            if (isShiftPressed) {
+                if (index > -1) {
+                    selectedLayers.splice(index, 1);
+                    layer_AssetsreplacementcostUSD_1.resetStyle(layer);
+                } else {
+                    selectedLayers.push(layer);
+                    layer.setStyle({ stroke: true, color: '#FFD700', weight: 3, opacity: 1 });
+                }
+            } else {
+                selectedLayers.forEach(function(l) {
+                    layer_AssetsreplacementcostUSD_1.resetStyle(l);
+                });
+                selectedLayers = [layer];
+                layer.setStyle({ stroke: true, color: '#FFD700', weight: 3, opacity: 1 });
+            }
+
+            updateSummaryPopup(e.latlng);
+        }
+
+        // 6. Color Classification
         function getColor(val) {
             return val > 7374635.36 ? 'rgba(8,48,107,0.75)' :
                    val > 1997189.87 ? 'rgba(41,121,185,0.75)' :
@@ -232,7 +308,7 @@
             };
         }
 
-        // 8. Create & Add Vector Layer
+        // 8. Create Vector Layer
         map.createPane('pane_AssetsreplacementcostUSD_1');
         map.getPane('pane_AssetsreplacementcostUSD_1').style.zIndex = 401;
 
@@ -240,11 +316,20 @@
             attribution: '',
             interactive: true,
             pane: 'pane_AssetsreplacementcostUSD_1',
-            onEachFeature: pop_AssetsreplacementcostUSD_1,
+            onEachFeature: function(feature, layer) {
+                layer.on({ click: onGridClick });
+            },
             style: style_AssetsreplacementcostUSD_1_0
         });
 
         map.addLayer(layer_AssetsreplacementcostUSD_1);
+
+        // Clear selections if clicking outside grids onto the map
+        map.on('click', function(e) {
+            if (e.originalEvent && !e.originalEvent.shiftKey) {
+                clearSelections();
+            }
+        });
 
         // 9. Layer Control Box
         var overlaysTree = [
