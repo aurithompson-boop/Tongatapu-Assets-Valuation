@@ -138,7 +138,7 @@
                 justify-content: center;
             }
 
-            /* Pop-up Modal Window matching screenshot */
+            /* Pop-up Modal Window */
             #instructions-modal {
                 background: #ffffff;
                 width: 90%;
@@ -254,7 +254,6 @@
                 text-align: center;
             }
 
-            /* Custom Grid On-Map Value Label Styling */
             .grid-cost-label {
                 background: transparent;
                 border: none;
@@ -376,8 +375,45 @@
             map.closePopup();
         }
 
+        // Robust numeric cleaner
+        function parseValue(val) {
+            if (val === undefined || val === null) return 0;
+            if (typeof val === 'number') return isNaN(val) ? 0 : val;
+            if (typeof val === 'string') {
+                var clean = val.replace(/[^0-9.-]+/g, "");
+                var num = parseFloat(clean);
+                return isNaN(num) ? 0 : num;
+            }
+            return 0;
+        }
+
+        // Searches GeoJSON feature properties flexibly for various field naming conventions
+        function getPropVal(props, possibleKeys) {
+            if (!props) return 0;
+            for (var i = 0; i < possibleKeys.length; i++) {
+                var key = possibleKeys[i];
+                if (props.hasOwnProperty(key) && props[key] !== null && props[key] !== undefined) {
+                    var val = parseValue(props[key]);
+                    if (val !== 0) return val;
+                }
+            }
+            // Fallback fuzzy search on field names
+            var propKeys = Object.keys(props);
+            for (var j = 0; j < possibleKeys.length; j++) {
+                var target = possibleKeys[j].toLowerCase().replace(/[^a-z0-9]/g, '');
+                for (var k = 0; k < propKeys.length; k++) {
+                    var actual = propKeys[k].toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (actual.includes(target) || target.includes(actual)) {
+                        var v = parseValue(props[propKeys[k]]);
+                        if (v !== 0) return v;
+                    }
+                }
+            }
+            return 0;
+        }
+
         function formatCurrency(val) {
-            var num = Number(val) || 0;
+            var num = parseValue(val);
             return '$' + num.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
         }
 
@@ -395,18 +431,26 @@
 
             selectedLayers.forEach(function(l) {
                 var p = l.feature.properties;
-                totals.building += Number(p['Building cost']) || 0;
-                totals.fuel += Number(p['Fuel facilities cost']) || 0;
-                totals.port += Number(p['Port facilities costs']) || 0;
-                totals.waterNet += Number(p['Water network cost']) || 0;
-                totals.roads += Number(p['Roads cost']) || 0;
-                totals.powerLines += Number(p['Power lines costs']) || 0;
-                totals.powerPoles += Number(p['Power poles cost']) || 0;
-                totals.telecom += Number(p['Telecommunication cost']) || 0;
-                totals.powerAssets += Number(p['Power assets costs']) || 0;
-                totals.water += Number(p['Water cost']) || 0;
-                totals.total += Number(p['Total replacement cost']) || Number(p['q2wHide_Total_Replacement_Cost_Raw']) || Number(p['Total_Replacement_Cost']) || 0;
+                totals.building += getPropVal(p, ['Building cost', 'Building_cost', 'Building_c', 'Building']);
+                totals.fuel += getPropVal(p, ['Fuel facilities cost', 'Fuel_facilities_cost', 'Fuel_facil', 'Fuel']);
+                totals.port += getPropVal(p, ['Port facilities costs', 'Port_facilities_cost', 'Port_facil', 'Port']);
+                totals.waterNet += getPropVal(p, ['Water network cost', 'Water_network_cost', 'Water_netw']);
+                totals.roads += getPropVal(p, ['Roads cost', 'Roads_cost', 'Roads']);
+                totals.powerLines += getPropVal(p, ['Power lines costs', 'Power_lines_cost', 'Power_line']);
+                totals.powerPoles += getPropVal(p, ['Power poles cost', 'Power_poles_cost', 'Power_pole']);
+                totals.telecom += getPropVal(p, ['Telecommunication cost', 'Telecommunication_cost', 'Telecom_co', 'Telecom']);
+                totals.powerAssets += getPropVal(p, ['Power assets costs', 'Power_assets_cost', 'Power_asse']);
+                totals.water += getPropVal(p, ['Water cost', 'Water_cost', 'Water']);
+                
+                var tVal = getPropVal(p, ['Total replacement cost', 'Total_Replacement_Cost', 'q2wHide_Total_Replacement_Cost_Raw', 'Total_repl', 'Total_cost']);
+                totals.total += tVal;
             });
+
+            // Fallback: If total column was not defined in dataset, sum up individual assets
+            var calculatedSum = totals.building + totals.fuel + totals.port + totals.waterNet + totals.roads + totals.powerLines + totals.powerPoles + totals.telecom + totals.powerAssets + totals.water;
+            if (totals.total === 0 && calculatedSum > 0) {
+                totals.total = calculatedSum;
+            }
 
             var headerText = selectedLayers.length === 1 ? 'Grid Cost Valuation' : 'Selected Grids: ' + selectedLayers.length;
 
@@ -459,7 +503,7 @@
         }
 
         function style_AssetsreplacementcostUSD_1_0(feature) {
-            var val = feature.properties['q2wHide_Total_Replacement_Cost_Raw'] || feature.properties['Total replacement cost'] || feature.properties['Total_Replacement_Cost'] || 0;
+            var val = getPropVal(feature.properties, ['Total replacement cost', 'Total_Replacement_Cost', 'q2wHide_Total_Replacement_Cost_Raw', 'Total_repl', 'Total_cost']);
             if (val >= 0.0 && val <= 245327.8) {
                 return { pane: 'pane_AssetsreplacementcostUSD_1', stroke: true, color: '#ffffff', weight: 0.5, opacity: 0.5, fill: true, fillOpacity: 0.7, fillColor: 'rgba(224,238,252,1.0)', interactive: true };
             }
@@ -490,10 +534,8 @@
                     click: onGridClick
                 });
 
-                var p = feature.properties;
-                var rawVal = p['Total replacement cost'] || p['Total_Replacement_Cost'] || p['q2wHide_Total_Replacement_Cost_Raw'];
-                
-                if (rawVal !== undefined && rawVal !== null && rawVal > 0) {
+                var rawVal = getPropVal(feature.properties, ['Total replacement cost', 'Total_Replacement_Cost', 'q2wHide_Total_Replacement_Cost_Raw', 'Total_repl', 'Total_cost']);
+                if (rawVal > 0) {
                     var displayVal = formatCurrency(rawVal);
                     layer.bindTooltip(displayVal, {
                         permanent: true,
@@ -532,12 +574,12 @@
             if (typeof json_AssetsreplacementcostUSD_1 !== 'undefined' && json_AssetsreplacementcostUSD_1.features) {
                 json_AssetsreplacementcostUSD_1.features.forEach(function(f) {
                     var p = f.properties;
-                    totals['Buildings'] += Number(p['Building cost']) || 0;
-                    totals['Roads'] += Number(p['Roads cost']) || 0;
-                    totals['Power Infra'] += (Number(p['Power lines costs']) || 0) + (Number(p['Power poles cost']) || 0) + (Number(p['Power assets costs']) || 0);
-                    totals['Water Infra'] += (Number(p['Water network cost']) || 0) + (Number(p['Water cost']) || 0);
-                    totals['Port & Fuel'] += (Number(p['Port facilities costs']) || 0) + (Number(p['Fuel facilities cost']) || 0);
-                    totals['Telecom'] += Number(p['Telecommunication cost']) || 0;
+                    totals['Buildings'] += getPropVal(p, ['Building cost', 'Building_cost', 'Building_c', 'Building']);
+                    totals['Roads'] += getPropVal(p, ['Roads cost', 'Roads_cost', 'Roads']);
+                    totals['Power Infra'] += getPropVal(p, ['Power lines costs', 'Power_lines_cost', 'Power_line']) + getPropVal(p, ['Power poles cost', 'Power_poles_cost', 'Power_pole']) + getPropVal(p, ['Power assets costs', 'Power_assets_cost', 'Power_asse']);
+                    totals['Water Infra'] += getPropVal(p, ['Water network cost', 'Water_network_cost', 'Water_netw']) + getPropVal(p, ['Water cost', 'Water_cost', 'Water']);
+                    totals['Port & Fuel'] += getPropVal(p, ['Port facilities costs', 'Port_facilities_cost', 'Port_facil', 'Port']) + getPropVal(p, ['Fuel facilities cost', 'Fuel_facilities_cost', 'Fuel_facil', 'Fuel']);
+                    totals['Telecom'] += getPropVal(p, ['Telecommunication cost', 'Telecommunication_cost', 'Telecom_co', 'Telecom']);
                 });
             }
 
@@ -569,17 +611,6 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        title: {
-                            display: false,
-                            text: 'Total Asset Exposure Breakdown',
-                            color: '#0066b2',
-                            font: {
-                                family: 'Arial',
-                                size: 13,
-                                weight: 'bold'
-                            },
-                            padding: { bottom: 8 }
-                        },
                         legend: {
                             position: 'bottom',
                             labels: {
@@ -604,7 +635,6 @@
             });
         }
 
-        // Run chart creation on page load
         window.addEventListener('DOMContentLoaded', function() {
             generateAssetChart();
         });
