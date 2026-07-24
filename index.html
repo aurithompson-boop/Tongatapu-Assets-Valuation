@@ -12,7 +12,7 @@
         <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
         <link rel="stylesheet" href="css/fontawesome-all.min.css">
         
-        <title>Tongatapu Infrastructure Asset Valuation</title>
+        <title>Tongatapu Infrastructure Asset Replacement Cost Valuation</title>
         
         <style>
             html, body {
@@ -22,12 +22,37 @@
                 margin: 0;
                 overflow: hidden;
                 font-family: Arial, Helvetica, sans-serif;
+                background-color: #ffffff;
             }
 
-            /* Responsive Fullscreen Map */
+            /* Custom Header / Title Banner Styling */
+            .map-header {
+                padding: 10px 20px;
+                background-color: #ffffff;
+                text-align: center;
+                border-bottom: 2px solid #0056b3;
+                box-sizing: border-box;
+                height: 75px;
+            }
+
+            .map-title {
+                margin: 0;
+                color: #1a5b8c;
+                font-size: 24px;
+                font-weight: bold;
+            }
+
+            .map-subtitle {
+                margin: 4px 0 0 0;
+                color: #555555;
+                font-size: 14px;
+                font-weight: normal;
+            }
+
+            /* Responsive Map Container */
             #map {
                 width: 100vw;
-                height: 100vh;
+                height: calc(100vh - 75px);
             }
 
             /* Enhanced Popup Styling */
@@ -84,6 +109,13 @@
         </style>
     </head>
     <body>
+        <!-- Header Banner -->
+        <header class="map-header">
+            <h1 class="map-title">Tongatapu Infrastructure Asset Replacement Cost Valuation</h1>
+            <p class="map-subtitle">Infrastructure Exposure Modelling | Tongatapu - Tonga</p>
+        </header>
+
+        <!-- Map Container -->
         <div id="map"></div>
 
         <!-- Essential Leaflet & Plugin Scripts -->
