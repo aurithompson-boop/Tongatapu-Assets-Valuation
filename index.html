@@ -17,16 +17,86 @@
         
         <title>Tongatapu Infrastructure Asset Replacement Cost Valuation</title>
         <style>
-            html, body, #map {
+            html, body {
                 width: 100%;
                 height: 100%;
                 padding: 0;
                 margin: 0;
             }
             #map {
-                height: calc(100vh - 60px);
+                width: 100%;
+                height: calc(100vh - 75px);
             }
             
+            /* Leaflet Popup Styling */
+            .leaflet-popup-content-wrapper {
+                background: #ffffff !important;
+                border-radius: 14px !important;
+                padding: 14px 16px !important;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.25) !important;
+            }
+            .leaflet-popup-content {
+                margin: 0 !important;
+                line-height: 1.4 !important;
+                min-width: 250px !important;
+            }
+            .leaflet-container a.leaflet-popup-close-button {
+                top: 10px !important;
+                right: 12px !important;
+                color: #555555 !important;
+                font-size: 16px !important;
+                font-weight: normal !important;
+            }
+
+            .popup-card {
+                font-family: Arial, Helvetica, sans-serif;
+            }
+
+            .popup-card-title {
+                color: #0066b2;
+                font-size: 16px;
+                font-weight: 700;
+                margin: 0 0 8px 0;
+                padding-bottom: 8px;
+                border-bottom: 1px solid #e0e0e0;
+            }
+
+            .popup-table {
+                font-family: Arial, Helvetica, sans-serif;
+                font-size: 13px;
+                border-collapse: collapse;
+                width: 100%;
+            }
+            .popup-table td {
+                padding: 3px 0;
+                color: #222222;
+            }
+            .popup-table td.label-col {
+                text-align: left;
+                font-weight: 600;
+            }
+            .popup-table td.val-col {
+                text-align: right;
+                color: #0066b2;
+                font-weight: 700;
+            }
+
+            .popup-total-row {
+                border-top: 1px solid #e0e0e0;
+                margin-top: 6px;
+                padding-top: 8px;
+            }
+            .popup-total-row td.label-col {
+                font-size: 14px;
+                font-weight: 700;
+                color: #222222;
+            }
+            .popup-total-row td.val-col {
+                font-size: 15px;
+                font-weight: 700;
+                color: #0066b2;
+            }
+
             /* Floating Info Button */
             #info-btn {
                 position: absolute;
@@ -34,7 +104,7 @@
                 right: 25px;
                 width: 44px;
                 height: 44px;
-                background: #0b5ea8;
+                background: #0066b2;
                 color: #ffffff;
                 border: none;
                 border-radius: 50%;
@@ -49,11 +119,11 @@
                 transition: transform 0.2s ease, background-color 0.2s ease;
             }
             #info-btn:hover {
-                background: #084378;
+                background: #004c85;
                 transform: scale(1.08);
             }
 
-            /* Pop-up Modal Backdrop */
+            /* Pop-up Modal Overlay */
             #instructions-modal-overlay {
                 display: none;
                 position: fixed;
@@ -61,64 +131,107 @@
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0, 0, 0, 0.5);
+                background: rgba(0, 0, 0, 0.45);
                 backdrop-filter: blur(2px);
                 z-index: 2000;
                 align-items: center;
                 justify-content: center;
             }
 
-            /* Pop-up Modal Window */
+            /* Pop-up Modal Window matching screenshot */
             #instructions-modal {
                 background: #ffffff;
                 width: 90%;
-                max-width: 400px;
-                border-radius: 12px;
-                padding: 20px 24px;
-                font-family: Arial, sans-serif;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+                max-width: 420px;
+                border-radius: 16px;
+                padding: 24px 28px;
+                font-family: Arial, Helvetica, sans-serif;
+                box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
                 position: relative;
                 animation: modalFadeIn 0.25s ease-out;
             }
 
             @keyframes modalFadeIn {
-                from { opacity: 0; transform: translateY(-12px); }
+                from { opacity: 0; transform: translateY(-10px); }
                 to { opacity: 1; transform: translateY(0); }
             }
 
-            #instructions-modal h3 {
-                margin: 0 0 12px 0;
-                color: #0b5ea8;
-                font-size: 16px;
+            .modal-header {
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 10px;
+                margin-bottom: 16px;
+            }
+
+            .modal-info-icon {
+                background: #418ddc;
+                color: #ffffff;
+                width: 24px;
+                height: 24px;
+                border-radius: 5px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 15px;
+                font-weight: bold;
+                font-style: italic;
+                font-family: 'Times New Roman', serif;
+            }
+
+            #instructions-modal h3 {
+                margin: 0;
+                color: #0066b2;
+                font-size: 18px;
+                font-weight: 700;
             }
 
             #instructions-modal ul {
                 margin: 0;
-                padding-left: 18px;
-                font-size: 13px;
-                color: #333;
-                line-height: 1.6;
+                padding-left: 20px;
+                font-size: 13.5px;
+                color: #2c2c2c;
+                line-height: 1.55;
             }
 
             #instructions-modal li {
-                margin-bottom: 8px;
+                margin-bottom: 12px;
+            }
+
+            #instructions-modal kbd {
+                background-color: #f8f9fa;
+                border: 1px solid #d1d5db;
+                border-radius: 4px;
+                box-shadow: 0 1px 1px rgba(0,0,0,0.1);
+                color: #333;
+                display: inline-block;
+                font-family: Consolas, "Liberation Mono", Courier, monospace;
+                font-size: 12px;
+                padding: 1px 6px;
             }
 
             .modal-close-btn {
                 position: absolute;
-                top: 14px;
-                right: 16px;
+                top: 18px;
+                right: 20px;
                 background: none;
                 border: none;
                 font-size: 20px;
-                color: #888;
+                color: #777777;
                 cursor: pointer;
+                line-height: 1;
             }
             .modal-close-btn:hover {
-                color: #333;
+                color: #111111;
+            }
+
+            .modal-footer-note {
+                margin-top: 16px;
+                border-top: 1px solid #e5e5e5;
+                padding-top: 12px;
+                font-size: 11px;
+                color: #666666;
+                font-style: italic;
+                line-height: 1.4;
             }
 
             #chart-widget {
@@ -130,33 +243,15 @@
                 border: 1px solid #b0b0b0;
                 border-radius: 8px;
                 padding: 12px;
-                font-family: Arial, sans-serif;
+                font-family: Arial, Helvetica, sans-serif;
                 box-shadow: 0 2px 8px rgba(0,0,0,0.2);
                 z-index: 1000;
             }
             #chart-widget h4 {
                 margin: 0 0 8px 0;
                 font-size: 13px;
-                color: #0b5ea8;
+                color: #0066b2;
                 text-align: center;
-            }
-
-            .popup-table {
-                font-family: Arial, sans-serif;
-                font-size: 12px;
-                border-collapse: collapse;
-                width: 100%;
-            }
-            .popup-table th {
-                text-align: left;
-                padding: 3px 6px;
-                color: #333;
-            }
-            .popup-table td {
-                text-align: right;
-                padding: 3px 6px;
-                color: #0b5ea8;
-                font-weight: bold;
             }
 
             /* Custom Grid On-Map Value Label Styling */
@@ -164,7 +259,7 @@
                 background: transparent;
                 border: none;
                 box-shadow: none;
-                font-family: Arial, sans-serif;
+                font-family: Arial, Helvetica, sans-serif;
                 font-size: 10px;
                 font-weight: bold;
                 color: #111111;
@@ -175,11 +270,12 @@
         </style>
     </head>
     <body>
-        <div style="text-align:center; background:#ffffff; padding:10px; border-bottom:2px solid #0b5ea8; font-family:Arial, sans-serif;">
-            <h2 style="margin:0; color:#0b5ea8; font-size:18px;">
+        <!-- Header Banner -->
+        <div style="text-align: center; background: #ffffff; padding: 14px 10px 10px 10px; font-family: Arial, Helvetica, sans-serif;">
+            <h1 style="margin: 0; color: #0066b2; font-size: 26px; font-weight: 700; letter-spacing: -0.2px;">
                 Tongatapu Infrastructure Asset Replacement Cost Valuation
-            </h2>
-            <p style="margin:2px 0 0; color:#555; font-size:12px;">
+            </h1>
+            <p style="margin: 6px 0 0 0; color: #4a4a4a; font-size: 15px; font-weight: 400;">
                 Infrastructure Exposure Modelling | Tongatapu - Tonga
             </p>
         </div>
@@ -193,14 +289,17 @@
         <div id="instructions-modal-overlay" onclick="closeInstructionsModal(event)">
             <div id="instructions-modal">
                 <button class="modal-close-btn" onclick="closeModalDirect()">&times;</button>
-                <h3>ℹ️ How to Use the Map</h3>
+                <div class="modal-header">
+                    <div class="modal-info-icon">i</div>
+                    <h3>How to Use the Map</h3>
+                </div>
                 <ul>
                     <li><strong>Single Click:</strong> View total cost breakdown for a single grid cell.</li>
                     <li><strong>Shift + Click:</strong> Hold <kbd>Shift</kbd> and click multiple cells to select or deselect them. Total replacement costs will dynamically calculate across all selected grids.</li>
                     <li><strong>Clear Selection:</strong> Click the red "Clear Selection" button in the popup to reset highlighted grids.</li>
                     <li><strong>Layer Legend:</strong> Use the upper-right <strong>Layers</strong> control to toggle maps and view the color scale.</li>
                 </ul>
-                <div style="margin-top: 12px; font-size: 11px; color: #555; border-top: 1px solid #eee; padding-top: 8px; font-style: italic;">
+                <div class="modal-footer-note">
                     *Note: Each grid contains estimated replacement costs of all major assets, apart from agriculture (crops) and the airport runway, which are not included.
                 </div>
             </div>
@@ -279,7 +378,7 @@
 
         function formatCurrency(val) {
             var num = Number(val) || 0;
-            return '$' + num.toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0});
+            return '$' + num.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
         }
 
         function updateSelectionPopup(latlng) {
@@ -311,22 +410,24 @@
 
             var headerText = selectedLayers.length === 1 ? 'Grid Cost Valuation' : 'Selected Grids: ' + selectedLayers.length;
 
-            var content = '<div style="font-family:Arial, sans-serif; font-size:12px; min-width:210px;">' +
-                '<strong style="color:#0b5ea8; font-size:13px;">' + headerText + '</strong><hr style="margin:5px 0;">' +
+            var content = '<div class="popup-card">' +
+                '<div class="popup-card-title">' + headerText + '</div>' +
                 '<table class="popup-table">' +
-                '<tr><th>Building cost:</th><td>' + formatCurrency(totals.building) + '</td></tr>' +
-                '<tr><th>Fuel facilities cost:</th><td>' + formatCurrency(totals.fuel) + '</td></tr>' +
-                '<tr><th>Port facilities cost:</th><td>' + formatCurrency(totals.port) + '</td></tr>' +
-                '<tr><th>Water network cost:</th><td>' + formatCurrency(totals.waterNet) + '</td></tr>' +
-                '<tr><th>Roads cost:</th><td>' + formatCurrency(totals.roads) + '</td></tr>' +
-                '<tr><th>Power lines cost:</th><td>' + formatCurrency(totals.powerLines) + '</td></tr>' +
-                '<tr><th>Power poles cost:</th><td>' + formatCurrency(totals.powerPoles) + '</td></tr>' +
-                '<tr><th>Telecommunication cost:</th><td>' + formatCurrency(totals.telecom) + '</td></tr>' +
-                '<tr><th>Power assets cost:</th><td>' + formatCurrency(totals.powerAssets) + '</td></tr>' +
-                '<tr><th>Water cost:</th><td>' + formatCurrency(totals.water) + '</td></tr>' +
-                '<tr style="font-weight:bold; border-top:1px solid #ccc; font-size:13px;"><th>Total replacement cost:</th><td style="color:#0b5ea8;">' + formatCurrency(totals.total) + '</td></tr>' +
+                '<tr><td class="label-col">Building cost:</td><td class="val-col">' + formatCurrency(totals.building) + '</td></tr>' +
+                '<tr><td class="label-col">Fuel facilities cost:</td><td class="val-col">' + formatCurrency(totals.fuel) + '</td></tr>' +
+                '<tr><td class="label-col">Port facilities cost:</td><td class="val-col">' + formatCurrency(totals.port) + '</td></tr>' +
+                '<tr><td class="label-col">Water network cost:</td><td class="val-col">' + formatCurrency(totals.waterNet) + '</td></tr>' +
+                '<tr><td class="label-col">Roads cost:</td><td class="val-col">' + formatCurrency(totals.roads) + '</td></tr>' +
+                '<tr><td class="label-col">Power lines cost:</td><td class="val-col">' + formatCurrency(totals.powerLines) + '</td></tr>' +
+                '<tr><td class="label-col">Power poles cost:</td><td class="val-col">' + formatCurrency(totals.powerPoles) + '</td></tr>' +
+                '<tr><td class="label-col">Telecommunication cost:</td><td class="val-col">' + formatCurrency(totals.telecom) + '</td></tr>' +
+                '<tr><td class="label-col">Power assets cost:</td><td class="val-col">' + formatCurrency(totals.powerAssets) + '</td></tr>' +
+                '<tr><td class="label-col">Water cost:</td><td class="val-col">' + formatCurrency(totals.water) + '</td></tr>' +
                 '</table>' +
-                (selectedLayers.length > 1 ? '<button onclick="clearSelections()" style="margin-top:8px; width:100%; background:#d9534f; color:#fff; border:none; padding:5px; border-radius:4px; cursor:pointer;">Clear Selection</button>' : '') +
+                '<table class="popup-table popup-total-row">' +
+                '<tr><td class="label-col">Total replacement cost:</td><td class="val-col">' + formatCurrency(totals.total) + '</td></tr>' +
+                '</table>' +
+                (selectedLayers.length > 1 ? '<button onclick="clearSelections()" style="margin-top:10px; width:100%; background:#d9534f; color:#fff; border:none; padding:6px; border-radius:6px; font-weight:bold; cursor:pointer;">Clear Selection</button>' : '') +
                 '</div>';
 
             activePopup.setLatLng(latlng).setContent(content).openOn(map);
@@ -455,7 +556,7 @@
                     datasets: [{
                         data: Object.values(totals),
                         backgroundColor: [
-                            '#0b5ea8',
+                            '#0066b2',
                             '#36a2eb',
                             '#ff6384',
                             '#4bc0c0',
@@ -471,7 +572,7 @@
                         title: {
                             display: false,
                             text: 'Total Asset Exposure Breakdown',
-                            color: '#0b5ea8',
+                            color: '#0066b2',
                             font: {
                                 family: 'Arial',
                                 size: 13,
