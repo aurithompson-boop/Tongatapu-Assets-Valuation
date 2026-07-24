@@ -25,7 +25,7 @@
                 background-color: #ffffff;
             }
 
-            /* Custom Header / Title Banner Styling */
+            /* Custom Header / Title Banner */
             .map-header {
                 padding: 10px 20px;
                 background-color: #ffffff;
@@ -38,14 +38,14 @@
             .map-title {
                 margin: 0;
                 color: #1a5b8c;
-                font-size: 24px;
+                font-size: 22px;
                 font-weight: bold;
             }
 
             .map-subtitle {
                 margin: 4px 0 0 0;
                 color: #555555;
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: normal;
             }
 
@@ -55,7 +55,7 @@
                 height: calc(100vh - 75px);
             }
 
-            /* Enhanced Popup Styling */
+            /* Popup Styling */
             .leaflet-popup-content-wrapper {
                 border-radius: 10px !important;
                 padding: 6px !important;
@@ -63,7 +63,7 @@
             }
             .leaflet-popup-content {
                 margin: 8px 12px !important;
-                min-width: 240px;
+                min-width: 250px;
             }
 
             .popup-title {
@@ -72,7 +72,7 @@
                 font-weight: bold;
                 border-bottom: 1px solid #e0e0e0;
                 padding-bottom: 6px;
-                margin-bottom: 8px;
+                margin-bottom: 6px;
             }
 
             .popup-hint {
@@ -85,7 +85,7 @@
             .popup-table {
                 width: 100%;
                 border-collapse: collapse;
-                font-size: 12.5px;
+                font-size: 12px;
             }
 
             .popup-table th {
@@ -109,7 +109,7 @@
             .popup-table tr.total-row th, 
             .popup-table tr.total-row td {
                 padding-top: 6px;
-                font-size: 13.5px;
+                font-size: 13px;
                 font-weight: 700;
                 color: #111;
             }
@@ -121,7 +121,7 @@
                 color: #ffffff;
                 border: none;
                 padding: 6px;
-                border-radius: 6px;
+                border-radius: 5px;
                 font-weight: bold;
                 cursor: pointer;
             }
@@ -156,7 +156,8 @@
         var map = L.map('map', {
             zoomControl: false, 
             maxZoom: 28, 
-            minZoom: 1
+            minZoom: 1,
+            closePopupOnClick: false // Prevents clicks from auto-closing popups
         }).fitBounds([[-21.277770517040558, -175.39660559586346], [-21.05675229650531, -174.97404585621942]]);
 
         var hash = new L.Hash(map);
@@ -177,7 +178,7 @@
         });
         map.addLayer(layer_ESRISatellite_0);
 
-        // 3. Number Parsing & Currency Formatting Helpers
+        // 3. Number Parsing & Currency Helpers
         function safeNum(val) {
             if (val === null || val === undefined) return 0;
             if (typeof val === 'number') return isNaN(val) ? 0 : val;
@@ -190,7 +191,7 @@
             return '$' + safeNum(val).toLocaleString('en-US', { maximumFractionDigits: 0 });
         }
 
-        // 4. Clean Field Configurations
+        // 4. Data Fields Mapping
         var fieldMap = [
             { key: 'Building_Allocated_RC_Raw', label: 'Building Cost' },
             { key: 'Fuel_Allocated_RC_Raw', label: 'Fuel Facilities' },
@@ -214,20 +215,18 @@
                 layer_AssetsreplacementcostUSD_1.resetStyle(l);
             });
             selectedLayers = [];
-            map.closePopup();
+            map.closePopup(activePopup);
         }
 
         function updateSummaryPopup(latlng) {
             if (selectedLayers.length === 0) {
-                map.closePopup();
+                map.closePopup(activePopup);
                 return;
             }
 
-            // Initialize total accumulator object
             var totals = {};
             fieldMap.forEach(function(item) { totals[item.key] = 0; });
 
-            // Accumulate values across all selected features
             selectedLayers.forEach(function(layer) {
                 var props = layer.feature.properties;
                 fieldMap.forEach(function(item) {
@@ -235,31 +234,39 @@
                 });
             });
 
-            // Header title based on selection count
             var headerText = selectedLayers.length === 1 
                 ? 'Asset Valuation Details (Cell #' + (selectedLayers[0].feature.properties['fid'] || 'N/A') + ')'
                 : 'Selected Grids Summary (' + selectedLayers.length + ' Grids)';
 
-            // Build popup HTML table
             var rows = '';
             fieldMap.forEach(function(item) {
                 var rowClass = item.isTotal ? 'class="total-row"' : '';
                 rows += '<tr ' + rowClass + '><th>' + item.label + '</th><td>' + formatCurrency(totals[item.key]) + '</td></tr>';
             });
 
-            var clearBtn = selectedLayers.length > 0 
-                ? '<button class="btn-clear" onclick="clearSelections()">Clear Selection</button>' 
-                : '';
+            var clearBtn = '<button id="btn-clear-selection" class="btn-clear">Clear Selection</button>';
 
             var popupContent = '<div class="popup-title">' + headerText + '</div>' +
-                               '<div class="popup-hint">Shift + Click on grids to add/remove from selection</div>' +
+                               '<div class="popup-hint">Shift + Click on grids to multi-select</div>' +
                                '<table class="popup-table">' + rows + '</table>' +
                                clearBtn;
 
             activePopup.setLatLng(latlng).setContent(popupContent).openOn(map);
+
+            // Bind click listener after popup DOM element renders
+            setTimeout(function() {
+                var btn = document.getElementById('btn-clear-selection');
+                if (btn) {
+                    btn.onclick = function() {
+                        clearSelections();
+                    };
+                }
+            }, 50);
         }
 
         function onGridClick(e) {
+            L.DomEvent.stopPropagation(e); // Stop event propagation to base map
+            
             var layer = e.target;
             var isShiftPressed = e.originalEvent && e.originalEvent.shiftKey;
             var index = selectedLayers.indexOf(layer);
@@ -308,7 +315,7 @@
             };
         }
 
-        // 8. Create Vector Layer
+        // 8. Create Vector Layer & Bind Events
         map.createPane('pane_AssetsreplacementcostUSD_1');
         map.getPane('pane_AssetsreplacementcostUSD_1').style.zIndex = 401;
 
@@ -317,18 +324,30 @@
             interactive: true,
             pane: 'pane_AssetsreplacementcostUSD_1',
             onEachFeature: function(feature, layer) {
-                layer.on({ click: onGridClick });
+                layer.on({
+                    click: onGridClick,
+                    mouseover: function(e) {
+                        var l = e.target;
+                        if (selectedLayers.indexOf(l) === -1) {
+                            l.setStyle({ weight: 2, color: '#FFD700', opacity: 0.9 });
+                        }
+                    },
+                    mouseout: function(e) {
+                        var l = e.target;
+                        if (selectedLayers.indexOf(l) === -1) {
+                            layer_AssetsreplacementcostUSD_1.resetStyle(l);
+                        }
+                    }
+                });
             },
             style: style_AssetsreplacementcostUSD_1_0
         });
 
         map.addLayer(layer_AssetsreplacementcostUSD_1);
 
-        // Clear selections if clicking outside grids onto the map
+        // Clear active selection on background map click
         map.on('click', function(e) {
-            if (e.originalEvent && !e.originalEvent.shiftKey) {
-                clearSelections();
-            }
+            clearSelections();
         });
 
         // 9. Layer Control Box
