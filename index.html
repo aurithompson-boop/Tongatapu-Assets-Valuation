@@ -15,6 +15,9 @@
         <!-- Chart.js CDN for Dynamic Graphs -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+        <!-- html2pdf.js for PDF Report Export -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
         <title>Tongatapu Infrastructure Asset Replacement Cost Valuation</title>
         
         <style>
@@ -164,6 +167,39 @@
                 height: 100%;
             }
 
+            /* Selection Mode Toolbar (Floating Top-Left on Map) */
+            .mode-toolbar {
+                position: absolute;
+                top: 15px;
+                left: 60px; /* leaves room for zoom controls */
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(5px);
+                border: 1px solid #dcdcdc;
+                border-radius: 6px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+                display: flex;
+                padding: 4px;
+                z-index: 1000;
+            }
+
+            .mode-btn {
+                background: transparent;
+                border: none;
+                padding: 6px 12px;
+                font-size: 12px;
+                font-weight: bold;
+                color: #555;
+                cursor: pointer;
+                border-radius: 4px;
+                transition: all 0.2s;
+            }
+
+            .mode-btn.active {
+                background: #0056b3;
+                color: white;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            }
+
             /* Analytics & Summary Dashboard Sidebar */
             .dashboard-panel {
                 width: 380px;
@@ -197,8 +233,8 @@
             .chart-container {
                 position: relative;
                 width: 100%;
-                height: 220px;
-                margin-bottom: 15px;
+                height: 200px;
+                margin-bottom: 12px;
             }
 
             .popup-table {
@@ -234,18 +270,40 @@
                 color: #111;
             }
 
+            .action-buttons {
+                display: flex;
+                gap: 8px;
+                margin-top: 5px;
+            }
+
             .btn-clear {
-                width: 100%;
+                flex: 1;
                 background: #d9534f;
                 color: #ffffff;
                 border: none;
                 padding: 8px;
                 border-radius: 5px;
                 font-weight: bold;
+                font-size: 11.5px;
                 cursor: pointer;
             }
             .btn-clear:hover {
                 background: #c9302c;
+            }
+
+            .btn-download {
+                flex: 1;
+                background: #28a745;
+                color: #ffffff;
+                border: none;
+                padding: 8px;
+                border-radius: 5px;
+                font-weight: bold;
+                font-size: 11.5px;
+                cursor: pointer;
+            }
+            .btn-download:hover {
+                background: #218838;
             }
 
             /* Floating Lower-Right Total Country Dashboard */
@@ -309,6 +367,54 @@
                 font-weight: 700;
                 color: #111;
             }
+
+            /* Hidden PDF / Word Report Export Container Styles */
+            #report-template {
+                display: none;
+                padding: 30px;
+                background: #ffffff;
+                color: #333333;
+                font-family: Arial, Helvetica, sans-serif;
+                width: 700px;
+                box-sizing: border-box;
+            }
+
+            .report-header-title {
+                font-size: 20px;
+                font-weight: bold;
+                color: #1a5b8c;
+                margin-bottom: 4px;
+                border-bottom: 2px solid #0056b3;
+                padding-bottom: 8px;
+            }
+
+            .report-meta {
+                font-size: 12px;
+                color: #555;
+                margin-bottom: 20px;
+            }
+
+            .report-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 12px;
+                margin-top: 15px;
+            }
+
+            .report-table th, .report-table td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+
+            .report-table th {
+                background-color: #f4f6f9;
+                color: #1a5b8c;
+            }
+
+            .report-table td:nth-child(2), .report-table td:nth-child(3) {
+                text-align: right;
+            }
         </style>
     </head>
     <body>
@@ -328,21 +434,26 @@
                 </div>
                 <div class="modal-body">
                     <ul>
-                        <li><strong>Single Click:</strong> View total cost breakdown for a single grid cell.</li>
-                        <li><strong>Shift + Click:</strong> Hold Shift and click multiple cells to select or deselect them. Total replacement costs will dynamically calculate across all selected grids.</li>
-                        <li><strong>Clear Selection:</strong> Click the "Clear Selection" button in the sidebar panel to reset highlighted grids.</li>
-                        <li><strong>Layer Legend:</strong> Use the upper-right Layers control to toggle maps and view the color scale.</li>
+                        <li><strong>Selection Modes:</strong> Toggle between <em>Single Select</em> and <em>Multi-Select</em> mode (or hold Shift + Click).</li>
+                        <li><strong>Report Download:</strong> Use the <strong>"Download Report"</strong> button in the sidebar panel to export a formal valuation document titled <em>"Replacement Costs (USD)"</em> as a PDF.</li>
+                        <li><strong>Layer Legend:</strong> Use the upper-right Layers control to view map color scales.</li>
                     </ul>
                     <div class="modal-note">
-                        <em>Note: Each grid contains estimated replacement costs of all major assets, apart from agriculture (crops) and the airport runway, which are not included.</em>
+                        <em>Note: Each grid contains estimated replacement costs of all major assets, apart from agriculture and airport runways.</em>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Main Body: Map, Sidebar, & Floating Total Country Dashboard -->
+        <!-- Main Body: Map, Toolbar, Sidebar, & Floating Total Dashboard -->
         <div class="main-container">
-            <div id="map"></div>
+            <div id="map">
+                <!-- Mode Selector Toolbar -->
+                <div class="mode-toolbar">
+                    <button class="mode-btn active" id="btn-mode-single" title="Click one grid at a time">Single Select</button>
+                    <button class="mode-btn" id="btn-mode-multi" title="Click multiple grids directly without holding Shift">Multi-Select</button>
+                </div>
+            </div>
             
             <!-- Floating Lower-Left Total Country Dashboard -->
             <div class="floating-total-dashboard">
@@ -359,7 +470,7 @@
             <div class="dashboard-panel">
                 <div>
                     <div class="dash-header" id="dash-title">Selection Summary (0 Grids)</div>
-                    <div class="dash-hint">Shift + Click on map grids to select and calculate statistics.</div>
+                    <div class="dash-hint" id="dash-hint-text">Click on map grids to select and calculate statistics.</div>
                     
                     <div class="chart-container">
                         <canvas id="assetChart"></canvas>
@@ -370,8 +481,35 @@
                     <table class="popup-table" id="dash-table">
                         <tr><td colspan="2" style="text-align:center; color:#888;">No selection made</td></tr>
                     </table>
-                    <button class="btn-clear" id="btn-clear-selection" style="display:none;">Clear Selection</button>
+                    <div class="action-buttons">
+                        <button class="btn-clear" id="btn-clear-selection" style="display:none;">Clear</button>
+                        <button class="btn-download" id="btn-download-report">Download Report</button>
+                    </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Hidden Report Template Used for PDF Generation -->
+        <div id="report-template">
+            <div class="report-header-title">Replacement Costs (USD)</div>
+            <div class="report-meta" id="report-meta-text">Tongatapu Infrastructure Exposure Valuation Report | Generated on: <span id="report-date"></span></div>
+            <p id="report-scope-desc" style="font-size: 13px; line-height: 1.4;">Summary evaluation of infrastructure asset replacement costs across selected spatial zones.</p>
+            
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Asset Category</th>
+                        <th>Total Cost (USD)</th>
+                        <th>Percentage Share</th>
+                    </tr>
+                </thead>
+                <tbody id="report-table-body">
+                    <!-- Populated dynamically via script -->
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 30px; font-size: 11px; color: #777; border-top: 1px solid #ddd; padding-top: 10px;">
+                Tongatapu Infrastructure Replacement Cost Valuation System &bull; IOM Information Management Support
             </div>
         </div>
 
@@ -479,7 +617,7 @@
                         ticks: { callback: function(value) { return value + '%'; } }
                     },
                     x: {
-                        ticks: { font: { size: 10 }, maxRotation: 45, minRotation: 45 }
+                        ticks: { font: { size: 9.5 }, maxRotation: 45, minRotation: 45 }
                     }
                 },
                 plugins: {
@@ -496,7 +634,26 @@
             }
         });
 
-        // 6. State Management & Dashboard Updater
+        // 6. Selection Mode State & Handlers
+        var isMultiSelectMode = false;
+        var btnSingle = document.getElementById('btn-mode-single');
+        var btnMulti = document.getElementById('btn-mode-multi');
+        var dashHintText = document.getElementById('dash-hint-text');
+
+        btnSingle.onclick = function() {
+            isMultiSelectMode = false;
+            btnSingle.classList.add('active');
+            btnMulti.classList.remove('active');
+            dashHintText.innerText = 'Click on map grids to select and calculate statistics.';
+        };
+
+        btnMulti.onclick = function() {
+            isMultiSelectMode = true;
+            btnMulti.classList.add('active');
+            btnSingle.classList.remove('active');
+            dashHintText.innerText = 'Multi-select active: Click multiple grids to add/remove them.';
+        };
+
         var selectedLayers = [];
 
         function clearSelections() {
@@ -574,7 +731,7 @@
             var isShiftPressed = e.originalEvent && e.originalEvent.shiftKey;
             var index = selectedLayers.indexOf(layer);
 
-            if (isShiftPressed) {
+            if (isMultiSelectMode || isShiftPressed) {
                 if (index > -1) {
                     selectedLayers.splice(index, 1);
                     layer_AssetsreplacementcostUSD_1.resetStyle(layer);
@@ -646,7 +803,7 @@
 
         map.addLayer(layer_AssetsreplacementcostUSD_1);
 
-        // Calculate and render the Total Country summary floating on the map automatically upon load
+        // 8. Total Country Summary Calculation
         function initTotalCountryDashboard() {
             var totalTable = document.getElementById('total-country-table');
             var globalTotals = {};
@@ -678,8 +835,72 @@
             totalTable.innerHTML = rows;
         }
 
-        // Run calculation after layer/data load
         initTotalCountryDashboard();
+
+        // 9. Download PDF Report Functionality
+        document.getElementById('btn-download-report').onclick = function() {
+            var reportTableBody = document.getElementById('report-table-body');
+            var scopeDesc = document.getElementById('report-scope-desc');
+            var reportDateSpan = document.getElementById('report-date');
+            
+            reportDateSpan.innerText = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            var totals = {};
+            var grandTotal = 0;
+            var totalReplacementCost = 0;
+            fieldMap.forEach(function(item) { totals[item.key] = 0; });
+
+            if (selectedLayers.length > 0) {
+                scopeDesc.innerText = 'Valuation Report for Selected Grids (' + selectedLayers.length + ' grid cells selected).';
+                selectedLayers.forEach(function(layer) {
+                    var props = layer.feature.properties;
+                    fieldMap.forEach(function(item) {
+                        var val = safeNum(props[item.key]);
+                        totals[item.key] += val;
+                        grandTotal += val;
+                    });
+                    totalReplacementCost += safeNum(props['Total_Replacement_Cost_Raw']);
+                });
+            } else {
+                scopeDesc.innerText = 'National Comprehensive Valuation Report (Aggregated across all Tongatapu map grid cells).';
+                if (typeof json_AssetsreplacementcostUSD_1 !== 'undefined' && json_AssetsreplacementcostUSD_1.features) {
+                    json_AssetsreplacementcostUSD_1.features.forEach(function(feat) {
+                        var props = feat.properties;
+                        fieldMap.forEach(function(item) {
+                            var val = safeNum(props[item.key]);
+                            totals[item.key] += val;
+                            grandTotal += val;
+                        });
+                        totalReplacementCost += safeNum(props['Total_Replacement_Cost_Raw']);
+                    });
+                }
+            }
+
+            var htmlRows = '';
+            fieldMap.forEach(function(item) {
+                var val = totals[item.key];
+                var pct = grandTotal > 0 ? (val / grandTotal) * 100 : 0;
+                htmlRows += '<tr><td>' + item.label + '</td><td>' + formatCurrency(val) + '</td><td>' + pct.toFixed(1) + '%</td></tr>';
+            });
+            htmlRows += '<tr style="font-weight: bold; background-color: #eef2f7;"><td>Total Valuation</td><td>' + formatCurrency(totalReplacementCost) + '</td><td>100.0%</td></tr>';
+            
+            reportTableBody.innerHTML = htmlRows;
+
+            var element = document.getElementById('report-template');
+            element.style.display = 'block';
+
+            var opt = {
+                margin:       10,
+                filename:     'Replacement_Costs_USD.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().from(element).set(opt).save().then(function() {
+                element.style.display = 'none';
+            });
+        };
 
         map.on('click', function(e) {
             clearSelections();
@@ -689,7 +910,7 @@
             clearSelections();
         };
 
-        // 8. Layer Control Box
+        // 10. Layer Control Box
         var overlaysTree = [
             {
                 label: 'Assets replacement cost (USD)<br />' +
