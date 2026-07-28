@@ -65,21 +65,10 @@
                 font-weight: normal;
             }
 
-            /* Header Action Buttons Container (Left side of header or absolute right) */
-            .header-actions {
+            /* Tonga Flag Styling on Left of Header */
+            .header-flag-left {
                 position: absolute;
-                right: 80px; /* leaves room for the flag */
-                top: 50%;
-                transform: translateY(-50%);
-                display: flex;
-                gap: 10px;
-                align-items: center;
-            }
-
-            /* Tonga Flag Styling in Header */
-            .header-flag {
-                position: absolute;
-                right: 20px;
+                left: 20px;
                 top: 50%;
                 transform: translateY(-50%);
                 width: 45px;
@@ -88,6 +77,16 @@
                 border: 1px solid #ccc;
                 border-radius: 3px;
                 box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+            }
+
+            /* Tonga NDRMO Flag / Logo Styling on Right of Header */
+            .header-flag-right {
+                position: absolute;
+                right: 20px;
+                top: 50%;
+                transform: translateY(-50%);
+                height: 34px;
+                object-fit: contain;
             }
 
             /* Generic Header Button Styling */
@@ -117,6 +116,17 @@
                 padding: 0;
                 border-radius: 50%;
                 font-size: 16px;
+            }
+
+            /* Floating Lower-Left Map Action Buttons Container */
+            .map-bottom-left-actions {
+                position: absolute;
+                bottom: 25px;
+                left: 15px;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                z-index: 1000;
             }
 
             /* Modal Overlay Styles (Shared for Info & National Summary Popup) */
@@ -208,6 +218,7 @@
             #map {
                 flex: 1;
                 height: 100%;
+                position: relative;
             }
 
             /* Selection Mode Toolbar (Floating Top-Left on Map) */
@@ -416,20 +427,16 @@
     <body>
         <!-- Header Banner -->
         <header class="map-header">
+            <!-- Tonga National Flag on Left -->
+            <img src="https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg" alt="Flag of Tonga" class="header-flag-left" title="Kingdom of Tonga">
+
             <div class="header-center-content">
                 <h1 class="map-title">Tongatapu Infrastructure Asset Replacement Cost Valuation</h1>
                 <p class="map-subtitle">Infrastructure Exposure Modelling | Tongatapu - Tonga</p>
             </div>
-            
-            <div class="header-actions">
-                <button class="header-btn" id="nationalSummaryBtn" title="View National Totals Across All Grids">
-                    <i class="fas fa-chart-pie"></i> Total Country Assets
-                </button>
-                <button class="header-btn info-btn" id="infoBtn" title="How to Use the Map">ℹ</button>
-            </div>
 
-            <!-- Tonga Flag Image (Using official Wikimedia Commons vector URL) -->
-            <img src="https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg" alt="Flag of Tonga" class="header-flag" title="Kingdom of Tonga">
+            <!-- Tonga NDRMO Flag / Logo on Right -->
+            <img src="https://tonga-data.sprep.org/themes/custom/inform/logo.svg" alt="Tonga NDRMO Logo" class="header-flag-right" title="National Disaster Risk Management Office (NDRMO) Tonga" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg';">
         </header>
 
         <!-- Information Modal Popup -->
@@ -441,7 +448,7 @@
                 </div>
                 <div class="modal-body">
                     <ul>
-                        <li><strong>Total Country Assets:</strong> Click the button in the upper-right header anytime to pop up a comprehensive dashboard summary of all grids across the entire country.</li>
+                        <li><strong>Total Country Assets:</strong> Click the button in the lower-left corner of the map anytime to pop up a comprehensive dashboard summary of all grids across the entire country.</li>
                         <li><strong>Selection Modes:</strong> Toggle between <em>Single Select</em> and <em>Multi-Select</em> mode on the map toolbar.</li>
                         <li><strong>Report Download:</strong> Use the <strong>"Download Report"</strong> button in the sidebar panel to export a formal valuation document titled <em>"Replacement Costs (USD)"</em> as a PDF including the national flag.</li>
                     </ul>
@@ -474,6 +481,14 @@
                 <div class="mode-toolbar">
                     <button class="mode-btn active" id="btn-mode-single" title="Click one grid at a time">Single Select</button>
                     <button class="mode-btn" id="btn-mode-multi" title="Click multiple grids directly without holding Shift">Multi-Select</button>
+                </div>
+
+                <!-- Lower-Left Map Action Buttons -->
+                <div class="map-bottom-left-actions">
+                    <button class="header-btn" id="nationalSummaryBtn" title="View National Totals Across All Grids">
+                        <i class="fas fa-chart-pie"></i> Total Country Assets
+                    </button>
+                    <button class="header-btn info-btn" id="infoBtn" title="How to Use the Map">ℹ</button>
                 </div>
             </div>
 
