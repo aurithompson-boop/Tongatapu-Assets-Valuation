@@ -156,6 +156,7 @@
                 display: flex;
                 width: 100vw;
                 height: calc(100vh - 75px);
+                position: relative;
             }
 
             #map {
@@ -246,6 +247,68 @@
             .btn-clear:hover {
                 background: #c9302c;
             }
+
+            /* Floating Lower-Right Total Country Dashboard */
+            .floating-total-dashboard {
+                position: absolute;
+                bottom: 20px;
+                left: 20px;
+                width: 320px;
+                max-height: 380px;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(5px);
+                border: 1px solid #dcdcdc;
+                border-radius: 8px;
+                box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+                box-sizing: border-box;
+                padding: 12px 15px;
+                overflow-y: auto;
+                z-index: 1000;
+            }
+
+            .total-dash-header {
+                font-size: 13.5px;
+                font-weight: bold;
+                color: #1a5b8c;
+                border-bottom: 1px solid #e0e0e0;
+                padding-bottom: 6px;
+                margin-bottom: 8px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .total-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 11px;
+            }
+
+            .total-table th {
+                text-align: left;
+                color: #444;
+                font-weight: 600;
+                padding: 3px 0;
+            }
+
+            .total-table td {
+                text-align: right;
+                color: #1a5b8c;
+                font-weight: bold;
+                padding: 3px 0;
+            }
+
+            .total-table tr.grand-total-row {
+                border-top: 1px solid #ccc;
+            }
+
+            .total-table tr.grand-total-row th,
+            .total-table tr.grand-total-row td {
+                padding-top: 5px;
+                font-size: 11.5px;
+                font-weight: 700;
+                color: #111;
+            }
         </style>
     </head>
     <body>
@@ -277,10 +340,22 @@
             </div>
         </div>
 
-        <!-- Main Body: Map & Dynamic Analytics Sidebar -->
+        <!-- Main Body: Map, Sidebar, & Floating Total Country Dashboard -->
         <div class="main-container">
             <div id="map"></div>
             
+            <!-- Floating Lower-Left Total Country Dashboard -->
+            <div class="floating-total-dashboard">
+                <div class="total-dash-header">
+                    <span>Total Country Asset Values</span>
+                    <span style="font-size:10px; color:#666; font-weight:normal;">All Grids</span>
+                </div>
+                <table class="total-table" id="total-country-table">
+                    <tr><td colspan="2" style="text-align:center; color:#888;">Loading totals...</td></tr>
+                </table>
+            </div>
+
+            <!-- Original Right-Side Panel -->
             <div class="dashboard-panel">
                 <div>
                     <div class="dash-header" id="dash-title">Selection Summary (0 Grids)</div>
@@ -570,6 +645,41 @@
         });
 
         map.addLayer(layer_AssetsreplacementcostUSD_1);
+
+        // Calculate and render the Total Country summary floating on the map automatically upon load
+        function initTotalCountryDashboard() {
+            var totalTable = document.getElementById('total-country-table');
+            var globalTotals = {};
+            var globalGrandTotal = 0;
+            var globalTotalReplacementCost = 0;
+
+            fieldMap.forEach(function(item) { globalTotals[item.key] = 0; });
+
+            if (typeof json_AssetsreplacementcostUSD_1 !== 'undefined' && json_AssetsreplacementcostUSD_1.features) {
+                json_AssetsreplacementcostUSD_1.features.forEach(function(feat) {
+                    var props = feat.properties;
+                    fieldMap.forEach(function(item) {
+                        var val = safeNum(props[item.key]);
+                        globalTotals[item.key] += val;
+                        globalGrandTotal += val;
+                    });
+                    globalTotalReplacementCost += safeNum(props['Total_Replacement_Cost_Raw']);
+                });
+            }
+
+            var rows = '';
+            fieldMap.forEach(function(item) {
+                var val = globalTotals[item.key];
+                var pct = globalGrandTotal > 0 ? (val / globalGrandTotal) * 100 : 0;
+                rows += '<tr><th>' + item.label + '</th><td>' + formatCurrency(val) + ' <span style="font-size:9.5px; color:#666;">(' + pct.toFixed(1) + '%)</span></td></tr>';
+            });
+
+            rows += '<tr class="grand-total-row"><th>Total Valuation</th><td>' + formatCurrency(globalTotalReplacementCost) + '</td></tr>';
+            totalTable.innerHTML = rows;
+        }
+
+        // Run calculation after layer/data load
+        initTotalCountryDashboard();
 
         map.on('click', function(e) {
             clearSelections();
