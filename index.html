@@ -12,8 +12,8 @@
         <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
         <link rel="stylesheet" href="css/fontawesome-all.min.css">
         
-        <!-- Leaflet Side-by-Side (Swipe) Plugin Styles -->
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-split-pane/leaflet-split-pane.css" />
+        <!-- Leaflet Draw Plugin Styles -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
         
         <!-- Chart.js CDN for Dynamic Graphs -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -257,21 +257,6 @@
                 box-shadow: 0 1px 4px rgba(0,0,0,0.2);
             }
 
-            /* Swipe Tool Toggle Button Container */
-            .swipe-toolbar {
-                position: absolute;
-                top: 15px;
-                left: 275px;
-                background: rgba(255, 255, 255, 0.95);
-                backdrop-filter: blur(5px);
-                border: 1px solid #dcdcdc;
-                border-radius: 6px;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-                display: flex;
-                padding: 4px;
-                z-index: 1000;
-            }
-
             /* Analytics & Summary Dashboard Sidebar */
             .dashboard-panel {
                 width: 380px;
@@ -304,7 +289,7 @@
             }
 
             .panel-section-title:first-of-type {
-                margin-top: 10px;
+                margin-top: 25px;
             }
 
             /* Custom Select Dropdown Styling */
@@ -513,8 +498,7 @@
                     <ul>
                         <li><strong>Total Country Assets:</strong> Click the "Total Country Assets" button at the top of the sidebar panel anytime to pop up a comprehensive dashboard summary of all grids across the entire country.</li>
                         <li><strong>Select by Island:</strong> Use the island drop-down menu to quickly switch or filter focus across different island groups.</li>
-                        <li><strong>Selection Modes:</strong> Toggle between <em>Single Select</em> and <em>Multi-Select</em> mode on the map toolbar.</li>
-                        <li><strong>Swipe Tool:</strong> Click the "Enable Swipe" button to peel back the top grid layer using a split-screen slider to reveal the underlying satellite imagery.</li>
+                        <li><strong>Selection Modes:</strong> Toggle between <em>Single</em>, <em>Multi</em>, or use the <strong>Rectangle</strong> and <strong>Polygon</strong> drawing tools on the map toolbar to select multiple grids at once by drawing boxes or custom shapes.</li>
                         <li><strong>Report Download:</strong> Use the <strong>"Download Report"</strong> button in the sidebar panel to export a formal valuation document titled <em>"Replacement Costs (USD)"</em> as a PDF including the national flag.</li>
                     </ul>
                     <div class="modal-note">
@@ -544,13 +528,10 @@
             <div id="map">
                 <!-- Mode Selector Toolbar -->
                 <div class="mode-toolbar">
-                    <button class="mode-btn active" id="btn-mode-single" title="Click one grid at a time">Single Select</button>
-                    <button class="mode-btn" id="btn-mode-multi" title="Click multiple grids directly without holding Shift">Multi-Select</button>
-                </div>
-
-                <!-- Swipe Tool Toolbar -->
-                <div class="swipe-toolbar">
-                    <button class="mode-btn" id="btn-toggle-swipe" title="Toggle Layer Swipe Comparison">Enable Swipe</button>
+                    <button class="mode-btn active" id="btn-mode-single" title="Click one grid at a time">Single</button>
+                    <button class="mode-btn" id="btn-mode-multi" title="Click multiple grids directly">Multi</button>
+                    <button class="mode-btn" id="btn-mode-rect" title="Draw rectangle to select grids">Rectangle</button>
+                    <button class="mode-btn" id="btn-mode-poly" title="Draw freehand/polygon to select grids">Polygon</button>
                 </div>
 
                 <!-- Lower-Left Map Action Buttons -->
@@ -638,8 +619,8 @@
         <script src="js/Autolinker.min.js"></script>
         <script src="js/rbush.min.js"></script>
         
-        <!-- Leaflet Side-by-Side (Swipe) Plugin Script -->
-        <script src="https://cdn.jsdelivr.net/npm/leaflet-split-pane/leaflet-split-pane.js"></script>
+        <!-- Leaflet Draw Plugin Script -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
         
         <!-- Data Import -->
         <script src="data/AssetsreplacementcostUSD_1.js"></script>
@@ -760,29 +741,54 @@
         // Island Dropdown Selection Handler
         document.getElementById('islandSelect').onchange = function(e) {
             var selectedIsland = e.target.value;
-            // Placeholder logic for island switching/filtering if multi-island datasets or bounds are integrated later
             console.log('Selected island group:', selectedIsland);
         };
 
         // 6. Selection Mode State & Handlers
-        var isMultiSelectMode = false;
+        var selectionMode = 'single'; // 'single', 'multi', 'rect', 'poly'
         var btnSingle = document.getElementById('btn-mode-single');
         var btnMulti = document.getElementById('btn-mode-multi');
+        var btnRect = document.getElementById('btn-mode-rect');
+        var btnPoly = document.getElementById('btn-mode-poly');
         var dashHintText = document.getElementById('dash-hint-text');
 
-        btnSingle.onclick = function() {
-            isMultiSelectMode = false;
-            btnSingle.classList.add('active');
-            btnMulti.classList.remove('active');
-            dashHintText.innerText = 'Click on map grids to select and calculate statistics.';
-        };
+        // Leaflet Draw FeatureGroup for drawn shapes
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        var drawControlRec = null;
+        var drawControlPoly = null;
 
-        btnMulti.onclick = function() {
-            isMultiSelectMode = true;
-            btnMulti.classList.add('active');
+        function setMode(mode) {
+            selectionMode = mode;
             btnSingle.classList.remove('active');
-            dashHintText.innerText = 'Multi-select active: Click multiple grids to add/remove them.';
-        };
+            btnMulti.classList.remove('active');
+            btnRect.classList.remove('active');
+            btnPoly.classList.remove('active');
+
+            // Clear any existing drawn shapes when switching modes
+            drawnItems.clearLayers();
+
+            if (mode === 'single') {
+                btnSingle.classList.add('active');
+                dashHintText.innerText = 'Click on map grids to select and calculate statistics.';
+            } else if (mode === 'multi') {
+                btnMulti.classList.add('active');
+                dashHintText.innerText = 'Multi-select active: Click multiple grids to add/remove them.';
+            } else if (mode === 'rect') {
+                btnRect.classList.add('active');
+                dashHintText.innerText = 'Rectangle mode: Click and drag on the map to select grids inside the box.';
+                new L.Draw.Rectangle(map, drawControlRec.options.rectangle).enable();
+            } else if (mode === 'poly') {
+                btnPoly.classList.add('active');
+                dashHintText.innerText = 'Polygon mode: Click points to draw a custom shape, double-click to finish.';
+                new L.Draw.Polygon(map, drawControlPoly.options.polygon).enable();
+            }
+        }
+
+        btnSingle.onclick = function() { setMode('single'); };
+        btnMulti.onclick = function() { setMode('multi'); };
+        btnRect.onclick = function() { setMode('rect'); };
+        btnPoly.onclick = function() { setMode('poly'); };
 
         var selectedLayers = [];
 
@@ -791,6 +797,7 @@
                 layer_AssetsreplacementcostUSD_1.resetStyle(l);
             });
             selectedLayers = [];
+            drawnItems.clearLayers();
             updateDashboard();
         }
 
@@ -856,12 +863,13 @@
         }
 
         function onGridClick(e) {
+            if (selectionMode === 'rect' || selectionMode === 'poly') return; 
             L.DomEvent.stopPropagation(e);
             var layer = e.target;
             var isShiftPressed = e.originalEvent && e.originalEvent.shiftKey;
             var index = selectedLayers.indexOf(layer);
 
-            if (isMultiSelectMode || isShiftPressed) {
+            if (selectionMode === 'multi' || isShiftPressed) {
                 if (index > -1) {
                     selectedLayers.splice(index, 1);
                     layer_AssetsreplacementcostUSD_1.resetStyle(layer);
@@ -933,35 +941,70 @@
 
         map.addLayer(layer_AssetsreplacementcostUSD_1);
 
-        // 8. Swipe Control Setup (Configured for Layer Swipe: Grid Top Layer vs Satellite Background Layer)
-        var swipeControl = null;
-        var isSwipeActive = false;
-        var btnToggleSwipe = document.getElementById('btn-toggle-swipe');
+        // Initialize Leaflet Draw handlers for programmatic triggers
+        drawControlRec = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: { polygon: false, polyline: false, circle: false, marker: false, circlemarker: false, rectangle: true }
+        });
+        drawControlPoly = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: { rectangle: false, polyline: false, circle: false, marker: false, circlemarker: false, polygon: true }
+        });
 
-        btnToggleSwipe.onclick = function() {
-            if (!isSwipeActive) {
-                if (typeof L.control.splitPane === 'function') {
-                    swipeControl = L.control.splitPane(layer_ESRISatellite_0, layer_AssetsreplacementcostUSD_1).addTo(map);
-                } else if (typeof L.control.sideBySide === 'function') {
-                    swipeControl = L.control.sideBySide(layer_ESRISatellite_0, layer_AssetsreplacementcostUSD_1).addTo(map);
+        // Function to select grids intersecting with a drawn geometry (Rectangle or Polygon)
+        function selectGridsByGeometry(layerGeometry) {
+            selectedLayers.forEach(function(l) {
+                layer_AssetsreplacementcostUSD_1.resetStyle(l);
+            });
+            selectedLayers = [];
+
+            layer_AssetsreplacementcostUSD_1.eachLayer(function(gridLayer) {
+                if (turfIntersect(gridLayer, layerGeometry)) {
+                    selectedLayers.push(gridLayer);
+                    gridLayer.setStyle({ stroke: true, color: '#FFD700', weight: 3, opacity: 1 });
                 }
-                isSwipeActive = true;
-                btnToggleSwipe.classList.add('active');
-                btnToggleSwipe.innerText = 'Disable Swipe';
-            } else {
-                if (swipeControl) {
-                    swipeControl.remove();
-                    swipeControl = null;
-                }
-                isSwipeActive = false;
-                btnToggleSwipe.classList.remove('active');
-                btnToggleSwipe.innerText = 'Enable Swipe';
-                if (!map.hasLayer(layer_ESRISatellite_0)) map.addLayer(layer_ESRISatellite_0);
-                if (!map.hasLayer(layer_AssetsreplacementcostUSD_1)) map.addLayer(layer_AssetsreplacementcostUSD_1);
+            });
+
+            updateDashboard();
+        }
+
+        function turfIntersect(gridLayer, drawnLayer) {
+            var gridBounds = gridLayer.getBounds();
+            var drawnBounds = drawnLayer.getBounds();
+
+            if (!gridBounds.intersects(drawnBounds)) return false;
+
+            if (drawnLayer instanceof L.Rectangle) {
+                return true;
             }
-        };
 
-        // 9. Initialize National Summary Modal Content
+            var center = gridBounds.getCenter();
+            var latLngs = drawnLayer.getLatLngs();
+            if (latLngs && latLngs.length > 0 && Array.isArray(latLngs[0])) {
+                latLngs = latLngs[0];
+            }
+            return isPointInPolygon(center, latLngs);
+        }
+
+        function isPointInPolygon(point, vs) {
+            var x = point.lat, y = point.lng;
+            var inside = false;
+            for (var i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+                var xi = vs[i].lat, yi = vs[i].lng;
+                var xj = vs[j].lat, yj = vs[j].lng;
+                var intersect = ((yi > y) != (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+                if (intersect) inside = !inside;
+            }
+            return inside;
+        }
+
+        map.on(L.Draw.Event.CREATED, function(e) {
+            var layer = e.layer;
+            drawnItems.addLayer(layer);
+            selectGridsByGeometry(layer);
+        });
+
+        // 8. Initialize National Summary Modal Content
         function initNationalSummaryModal() {
             var modalTable = document.getElementById('national-modal-table');
             var globalTotals = {};
@@ -995,7 +1038,7 @@
 
         initNationalSummaryModal();
 
-        // 10. Download PDF Report Functionality
+        // 9. Download PDF Report Functionality
         document.getElementById('btn-download-report').onclick = function() {
             var reportTableBody = document.getElementById('report-table-body');
             var scopeDesc = document.getElementById('report-scope-desc');
@@ -1060,15 +1103,11 @@
             });
         };
 
-        map.on('click', function(e) {
-            clearSelections();
-        });
-
         document.getElementById('btn-clear-selection').onclick = function() {
             clearSelections();
         };
 
-        // 11. Layer Control Box
+        // 10. Layer Control Box
         var overlaysTree = [
             {
                 label: 'Assets replacement cost (USD)<br />' +
