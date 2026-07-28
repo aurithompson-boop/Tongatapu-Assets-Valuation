@@ -300,11 +300,30 @@
                 font-size: 13.5px;
                 font-weight: bold;
                 color: #333333;
-                margin: 20px 0 8px 0;
+                margin: 24px 0 8px 0;
             }
 
             .panel-section-title:first-of-type {
-                margin-top: 5px;
+                margin-top: 10px;
+            }
+
+            /* Custom Select Dropdown Styling */
+            .island-select {
+                width: 100%;
+                padding: 8px 12px;
+                font-size: 13px;
+                font-weight: bold;
+                color: #333;
+                background-color: #f8f9fa;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                box-sizing: border-box;
+                cursor: pointer;
+                outline: none;
+                transition: border-color 0.2s;
+            }
+            .island-select:focus {
+                border-color: #0056b3;
             }
 
             .dash-header {
@@ -493,6 +512,7 @@
                 <div class="modal-body">
                     <ul>
                         <li><strong>Total Country Assets:</strong> Click the "Total Country Assets" button at the top of the sidebar panel anytime to pop up a comprehensive dashboard summary of all grids across the entire country.</li>
+                        <li><strong>Select by Island:</strong> Use the island drop-down menu to quickly switch or filter focus across different island groups.</li>
                         <li><strong>Selection Modes:</strong> Toggle between <em>Single Select</em> and <em>Multi-Select</em> mode on the map toolbar.</li>
                         <li><strong>Swipe Tool:</strong> Click the "Enable Swipe" button to peel back the top grid layer using a split-screen slider to reveal the underlying satellite imagery.</li>
                         <li><strong>Report Download:</strong> Use the <strong>"Download Report"</strong> button in the sidebar panel to export a formal valuation document titled <em>"Replacement Costs (USD)"</em> as a PDF including the national flag.</li>
@@ -548,6 +568,15 @@
                     <button class="header-btn" id="nationalSummaryBtn" title="View National Totals Across All Grids" style="width: 100%; margin-bottom: 8px; border-radius: 4px;">
                         <i class="fas fa-chart-pie"></i> Total Country Assets
                     </button>
+
+                    <div class="panel-section-title">Select by Island</div>
+                    <select class="island-select" id="islandSelect">
+                        <option value="tongatapu" selected>Tongatapu</option>
+                        <option value="vavaau">Vava'au</option>
+                        <option value="haapai">Ha'apai</option>
+                        <option value="eua">Eua</option>
+                        <option value="niuas">Niuas</option>
+                    </select>
 
                     <div class="panel-section-title">Spatial Grid Selection Analysis</div>
                     <div class="dash-header" id="dash-title">Selection Summary (0 Grids)</div>
@@ -728,6 +757,13 @@
             }
         });
 
+        // Island Dropdown Selection Handler
+        document.getElementById('islandSelect').onchange = function(e) {
+            var selectedIsland = e.target.value;
+            // Placeholder logic for island switching/filtering if multi-island datasets or bounds are integrated later
+            console.log('Selected island group:', selectedIsland);
+        };
+
         // 6. Selection Mode State & Handlers
         var isMultiSelectMode = false;
         var btnSingle = document.getElementById('btn-mode-single');
@@ -904,8 +940,6 @@
 
         btnToggleSwipe.onclick = function() {
             if (!isSwipeActive) {
-                // Leaflet split-pane expects (leftLayer, rightLayer). 
-                // Passing Satellite as left and Grid as right allows swiping the grid layer to reveal the satellite background.
                 if (typeof L.control.splitPane === 'function') {
                     swipeControl = L.control.splitPane(layer_ESRISatellite_0, layer_AssetsreplacementcostUSD_1).addTo(map);
                 } else if (typeof L.control.sideBySide === 'function') {
