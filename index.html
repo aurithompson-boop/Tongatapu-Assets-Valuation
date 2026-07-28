@@ -286,12 +286,12 @@
                 justify-content: space-between;
             }
 
-            /* Sidebar Section Styling & Headings */
+            /* Sidebar Section Styling & Headings with Added Spacing */
             .panel-main-title {
                 font-size: 16px;
                 font-weight: bold;
                 color: #1a5b8c;
-                margin: 0 0 12px 0;
+                margin: 0 0 16px 0;
                 padding-bottom: 6px;
                 border-bottom: 2px solid #0056b3;
             }
@@ -300,7 +300,11 @@
                 font-size: 13.5px;
                 font-weight: bold;
                 color: #333333;
-                margin: 12px 0 6px 0;
+                margin: 20px 0 8px 0;
+            }
+
+            .panel-section-title:first-of-type {
+                margin-top: 5px;
             }
 
             .dash-header {
@@ -309,13 +313,13 @@
                 color: #0066b2;
                 border-bottom: 1px solid #e0e0e0;
                 padding-bottom: 6px;
-                margin: 12px 0 6px 0;
+                margin: 16px 0 6px 0;
             }
 
             .dash-hint {
                 font-size: 11px;
                 color: #666;
-                margin-bottom: 10px;
+                margin-bottom: 12px;
                 font-style: italic;
             }
 
@@ -323,7 +327,7 @@
                 position: relative;
                 width: 100%;
                 height: 180px;
-                margin-bottom: 10px;
+                margin-bottom: 15px;
             }
 
             .popup-table {
@@ -362,7 +366,7 @@
             .action-buttons {
                 display: flex;
                 gap: 8px;
-                margin-top: 5px;
+                margin-top: 10px;
             }
 
             .btn-clear {
@@ -490,7 +494,7 @@
                     <ul>
                         <li><strong>Total Country Assets:</strong> Click the "Total Country Assets" button at the top of the sidebar panel anytime to pop up a comprehensive dashboard summary of all grids across the entire country.</li>
                         <li><strong>Selection Modes:</strong> Toggle between <em>Single Select</em> and <em>Multi-Select</em> mode on the map toolbar.</li>
-                        <li><strong>Swipe Tool:</strong> Click the "Enable Swipe" button to visually compare the Satellite imagery against the Asset Valuation layer using a side-by-side slider.</li>
+                        <li><strong>Swipe Tool:</strong> Click the "Enable Swipe" button to peel back the top grid layer using a split-screen slider to reveal the underlying satellite imagery.</li>
                         <li><strong>Report Download:</strong> Use the <strong>"Download Report"</strong> button in the sidebar panel to export a formal valuation document titled <em>"Replacement Costs (USD)"</em> as a PDF including the national flag.</li>
                     </ul>
                     <div class="modal-note">
@@ -526,7 +530,7 @@
 
                 <!-- Swipe Tool Toolbar -->
                 <div class="swipe-toolbar">
-                    <button class="mode-btn" id="btn-toggle-swipe" title="Toggle Side-by-Side Swipe Comparison">Enable Swipe</button>
+                    <button class="mode-btn" id="btn-toggle-swipe" title="Toggle Layer Swipe Comparison">Enable Swipe</button>
                 </div>
 
                 <!-- Lower-Left Map Action Buttons -->
@@ -541,7 +545,7 @@
                     <h2 class="panel-main-title">Infrastructure Valuation Dashboard</h2>
                     
                     <div class="panel-section-title">National Summary Overview</div>
-                    <button class="header-btn" id="nationalSummaryBtn" title="View National Totals Across All Grids" style="width: 100%; margin-bottom: 12px; border-radius: 4px;">
+                    <button class="header-btn" id="nationalSummaryBtn" title="View National Totals Across All Grids" style="width: 100%; margin-bottom: 8px; border-radius: 4px;">
                         <i class="fas fa-chart-pie"></i> Total Country Assets
                     </button>
 
@@ -555,7 +559,7 @@
                 </div>
 
                 <div>
-                    <div class="panel-section-title">Detailed Asset Breakdown Table</div>
+                    <div class="panel-section-title">Detailed Asset Breakdown</div>
                     <table class="popup-table" id="dash-table">
                         <tr><td colspan="2" style="text-align:center; color:#888;">No selection made</td></tr>
                     </table>
@@ -644,7 +648,7 @@
 
         L.control.zoom({ position: 'topleft' }).addTo(map);
 
-        // 2. Base Satellite Layer
+        // 2. Base Satellite Layer (Background)
         map.createPane('pane_ESRISatellite_0');
         map.getPane('pane_ESRISatellite_0').style.zIndex = 400;
 
@@ -840,7 +844,7 @@
             updateDashboard();
         }
 
-        // 7. Styling & Layers
+        // 7. Styling & Layers (Top Layer Grid)
         function getColor(val) {
             return val > 7374635.36 ? 'rgba(8,48,107,0.75)' :
                    val > 1997189.87 ? 'rgba(41,121,185,0.75)' :
@@ -893,14 +897,15 @@
 
         map.addLayer(layer_AssetsreplacementcostUSD_1);
 
-        // 8. Swipe Control Setup (Leaflet Split-Pane / Side-by-Side)
+        // 8. Swipe Control Setup (Configured for Layer Swipe: Grid Top Layer vs Satellite Background Layer)
         var swipeControl = null;
         var isSwipeActive = false;
         var btnToggleSwipe = document.getElementById('btn-toggle-swipe');
 
         btnToggleSwipe.onclick = function() {
             if (!isSwipeActive) {
-                // Activate swipe: satellite on the left, vector layer on the right (or vice versa)
+                // Leaflet split-pane expects (leftLayer, rightLayer). 
+                // Passing Satellite as left and Grid as right allows swiping the grid layer to reveal the satellite background.
                 if (typeof L.control.splitPane === 'function') {
                     swipeControl = L.control.splitPane(layer_ESRISatellite_0, layer_AssetsreplacementcostUSD_1).addTo(map);
                 } else if (typeof L.control.sideBySide === 'function') {
@@ -917,7 +922,6 @@
                 isSwipeActive = false;
                 btnToggleSwipe.classList.remove('active');
                 btnToggleSwipe.innerText = 'Enable Swipe';
-                // Ensure layers are fully active in normal view
                 if (!map.hasLayer(layer_ESRISatellite_0)) map.addLayer(layer_ESRISatellite_0);
                 if (!map.hasLayer(layer_AssetsreplacementcostUSD_1)) map.addLayer(layer_AssetsreplacementcostUSD_1);
             }
