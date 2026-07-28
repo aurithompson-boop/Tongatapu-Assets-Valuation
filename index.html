@@ -77,25 +77,16 @@
                 font-weight: normal;
             }
 
-            /* Tonga Flag Styling on Left */
-            .header-flag-left {
+            /* Uniform sizing for both header flags/logos */
+            .header-flag-left, .header-flag-right {
                 width: 45px;
                 height: 28px;
-                object-fit: cover;
+                object-fit: contain;
                 border: 1px solid #ccc;
                 border-radius: 3px;
-                box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-            }
-
-            /* Tonga NDRMO Flag / Logo Styling Inline on Right */
-            .header-flag-right {
-                height: 36px;
-                object-fit: contain;
-                border: 1px solid #e0e0e0;
-                border-radius: 3px;
                 background: #fff;
-                padding: 2px;
-                box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+                padding: 1px;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.2);
             }
 
             /* Generic Header Button Styling */
@@ -397,11 +388,13 @@
             }
 
             .report-flag {
-                width: 50px;
-                height: 30px;
-                object-fit: cover;
+                width: 45px;
+                height: 28px;
+                object-fit: contain;
                 border: 1px solid #ccc;
                 border-radius: 2px;
+                background: #fff;
+                padding: 1px;
             }
 
             .report-meta {
@@ -447,9 +440,9 @@
                 <p class="map-subtitle">Infrastructure Exposure Modelling | Tongatapu - Tonga</p>
             </div>
 
-            <!-- Right Group: Tonga NDRMO Logo Inline -->
+            <!-- Right Group: Updated Tonga NDRMO Official Logo -->
             <div class="header-right-group">
-                <img src="https://tonga-data.sprep.org/themes/custom/inform/logo.svg" alt="Tonga NDRMO Logo" class="header-flag-right" title="National Disaster Risk Management Office (NDRMO) Tonga" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg';">
+                <img src="https://scontent.fdet1-2.fna.fbcdn.net/v/t39.30808-6/434771690_233177325516336_2894194098921867119_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=h_q5d_V8YxMQ7kNvgFvJg1P&_nc_zt=23&_nc_ht=scontent.fdet1-2.fna.fbcdn.net&oh=00_AYC3u82Y0J2Rz3zP92l8hZl9b1X2a3K4l5m6n7o8p9q0rA&oe=66E1D942" alt="Tonga NDRMO Logo" class="header-flag-right" title="National Disaster Risk Management Office (NDRMO) Tonga" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg';">
             </div>
         </header>
 
@@ -462,12 +455,12 @@
                 </div>
                 <div class="modal-body">
                     <ul>
-                        <li><strong>Total Country Assets:</strong> Click the "Total Country Assets" button at the top of the sidebar panel anytime to pop up a comprehensive dashboard summary of all grids across the entire country.[cite: 2]</li>
-                        <li><strong>Selection Modes:</strong> Toggle between <em>Single Select</em> and <em>Multi-Select</em> mode on the map toolbar.[cite: 2]</li>
-                        <li><strong>Report Download:</strong> Use the <strong>"Download Report"</strong> button in the sidebar panel to export a formal valuation document titled <em>"Replacement Costs (USD)"</em> as a PDF including the national flag.[cite: 2]</li>
+                        <li><strong>Total Country Assets:</strong> Click the "Total Country Assets" button at the top of the sidebar panel anytime to pop up a comprehensive dashboard summary of all grids across the entire country.</li>
+                        <li><strong>Selection Modes:</strong> Toggle between <em>Single Select</em> and <em>Multi-Select</em> mode on the map toolbar.</li>
+                        <li><strong>Report Download:</strong> Use the <strong>"Download Report"</strong> button in the sidebar panel to export a formal valuation document titled <em>"Replacement Costs (USD)"</em> as a PDF including the national flag.</li>
                     </ul>
                     <div class="modal-note">
-                        <em>Note: Each grid contains estimated replacement costs of all major assets, apart from agriculture and airport runways.</em>[cite: 2]
+                        <em>Note: Each grid contains estimated replacement costs of all major assets, apart from agriculture and airport runways.</em>
                     </div>
                 </div>
             </div>
