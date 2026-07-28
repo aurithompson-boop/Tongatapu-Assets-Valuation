@@ -42,35 +42,43 @@
                 position: relative;
                 display: flex;
                 align-items: center;
-                justify-content: center;
+                justify-content: space-between;
+            }
+
+            .header-left-group {
+                display: flex;
+                align-items: center;
+                gap: 12px;
             }
 
             .header-center-content {
                 display: flex;
                 flex-direction: column;
                 align-items: center;
+                flex: 1;
+            }
+
+            .header-right-group {
+                display: flex;
+                align-items: center;
             }
 
             .map-title {
                 margin: 0;
                 color: #1a5b8c;
-                font-size: 22px;
+                font-size: 21px;
                 font-weight: bold;
             }
 
             .map-subtitle {
-                margin: 4px 0 0 0;
+                margin: 3px 0 0 0;
                 color: #555555;
-                font-size: 13px;
+                font-size: 12.5px;
                 font-weight: normal;
             }
 
-            /* Tonga Flag Styling on Left of Header */
+            /* Tonga Flag Styling on Left */
             .header-flag-left {
-                position: absolute;
-                left: 20px;
-                top: 50%;
-                transform: translateY(-50%);
                 width: 45px;
                 height: 28px;
                 object-fit: cover;
@@ -79,14 +87,15 @@
                 box-shadow: 0 1px 4px rgba(0,0,0,0.2);
             }
 
-            /* Tonga NDRMO Flag / Logo Styling on Right of Header */
+            /* Tonga NDRMO Flag / Logo Styling Inline on Right */
             .header-flag-right {
-                position: absolute;
-                right: 20px;
-                top: 50%;
-                transform: translateY(-50%);
-                height: 34px;
+                height: 36px;
                 object-fit: contain;
+                border: 1px solid #e0e0e0;
+                border-radius: 3px;
+                background: #fff;
+                padding: 2px;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.1);
             }
 
             /* Generic Header Button Styling */
@@ -427,16 +436,21 @@
     <body>
         <!-- Header Banner -->
         <header class="map-header">
-            <!-- Tonga National Flag on Left -->
-            <img src="https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg" alt="Flag of Tonga" class="header-flag-left" title="Kingdom of Tonga">
+            <!-- Left Group: National Flag of Tonga -->
+            <div class="header-left-group">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg" alt="Flag of Tonga" class="header-flag-left" title="Kingdom of Tonga">
+            </div>
 
+            <!-- Center Content: Title & Subtitle -->
             <div class="header-center-content">
                 <h1 class="map-title">Tongatapu Infrastructure Asset Replacement Cost Valuation</h1>
                 <p class="map-subtitle">Infrastructure Exposure Modelling | Tongatapu - Tonga</p>
             </div>
 
-            <!-- Tonga NDRMO Flag / Logo on Right -->
-            <img src="https://tonga-data.sprep.org/themes/custom/inform/logo.svg" alt="Tonga NDRMO Logo" class="header-flag-right" title="National Disaster Risk Management Office (NDRMO) Tonga" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg';">
+            <!-- Right Group: Tonga NDRMO Logo Inline -->
+            <div class="header-right-group">
+                <img src="https://tonga-data.sprep.org/themes/custom/inform/logo.svg" alt="Tonga NDRMO Logo" class="header-flag-right" title="National Disaster Risk Management Office (NDRMO) Tonga" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg';">
+            </div>
         </header>
 
         <!-- Information Modal Popup -->
@@ -448,12 +462,12 @@
                 </div>
                 <div class="modal-body">
                     <ul>
-                        <li><strong>Total Country Assets:</strong> Click the button in the lower-left corner of the map anytime to pop up a comprehensive dashboard summary of all grids across the entire country.</li>
-                        <li><strong>Selection Modes:</strong> Toggle between <em>Single Select</em> and <em>Multi-Select</em> mode on the map toolbar.</li>
-                        <li><strong>Report Download:</strong> Use the <strong>"Download Report"</strong> button in the sidebar panel to export a formal valuation document titled <em>"Replacement Costs (USD)"</em> as a PDF including the national flag.</li>
+                        <li><strong>Total Country Assets:</strong> Click the "Total Country Assets" button at the top of the sidebar panel anytime to pop up a comprehensive dashboard summary of all grids across the entire country.[cite: 2]</li>
+                        <li><strong>Selection Modes:</strong> Toggle between <em>Single Select</em> and <em>Multi-Select</em> mode on the map toolbar.[cite: 2]</li>
+                        <li><strong>Report Download:</strong> Use the <strong>"Download Report"</strong> button in the sidebar panel to export a formal valuation document titled <em>"Replacement Costs (USD)"</em> as a PDF including the national flag.[cite: 2]</li>
                     </ul>
                     <div class="modal-note">
-                        <em>Note: Each grid contains estimated replacement costs of all major assets, apart from agriculture and airport runways.</em>
+                        <em>Note: Each grid contains estimated replacement costs of all major assets, apart from agriculture and airport runways.</em>[cite: 2]
                     </div>
                 </div>
             </div>
@@ -485,9 +499,6 @@
 
                 <!-- Lower-Left Map Action Buttons -->
                 <div class="map-bottom-left-actions">
-                    <button class="header-btn" id="nationalSummaryBtn" title="View National Totals Across All Grids">
-                        <i class="fas fa-chart-pie"></i> Total Country Assets
-                    </button>
                     <button class="header-btn info-btn" id="infoBtn" title="How to Use the Map">ℹ</button>
                 </div>
             </div>
@@ -495,6 +506,9 @@
             <!-- Original Right-Side Panel -->
             <div class="dashboard-panel">
                 <div>
+                    <button class="header-btn" id="nationalSummaryBtn" title="View National Totals Across All Grids" style="width: 100%; margin-bottom: 15px; border-radius: 4px;">
+                        <i class="fas fa-chart-pie"></i> Total Country Assets
+                    </button>
                     <div class="dash-header" id="dash-title">Selection Summary (0 Grids)</div>
                     <div class="dash-hint" id="dash-hint-text">Click on map grids to select and calculate statistics.</div>
                     
@@ -962,10 +976,6 @@
         ];
 
         var lay = L.control.layers.tree(null, overlaysTree, { collapsed: true });
-        lay.addTo(map);
-        </script>
-    </body>
-</html>
         lay.addTo(map);
         </script>
     </body>
