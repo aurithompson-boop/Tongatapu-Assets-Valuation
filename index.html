@@ -12,6 +12,9 @@
         <link rel="stylesheet" href="css/L.Control.Layers.Tree.css">
         <link rel="stylesheet" href="css/fontawesome-all.min.css">
         
+        <!-- Leaflet Side-by-Side (Swipe) Plugin Styles -->
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-split-pane/leaflet-split-pane.css" />
+        
         <!-- Chart.js CDN for Dynamic Graphs -->
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -77,7 +80,7 @@
                 font-weight: normal;
             }
 
-            /* Uniform sizing for both header flags/logos */
+            /* Uniform sizing for header flag/logo */
             .header-flag-left, .header-flag-right {
                 width: 45px;
                 height: 28px;
@@ -254,6 +257,21 @@
                 box-shadow: 0 1px 4px rgba(0,0,0,0.2);
             }
 
+            /* Swipe Tool Toggle Button Container */
+            .swipe-toolbar {
+                position: absolute;
+                top: 15px;
+                left: 275px;
+                background: rgba(255, 255, 255, 0.95);
+                backdrop-filter: blur(5px);
+                border: 1px solid #dcdcdc;
+                border-radius: 6px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+                display: flex;
+                padding: 4px;
+                z-index: 1000;
+            }
+
             /* Analytics & Summary Dashboard Sidebar */
             .dashboard-panel {
                 width: 380px;
@@ -268,27 +286,44 @@
                 justify-content: space-between;
             }
 
+            /* Sidebar Section Styling & Headings */
+            .panel-main-title {
+                font-size: 16px;
+                font-weight: bold;
+                color: #1a5b8c;
+                margin: 0 0 12px 0;
+                padding-bottom: 6px;
+                border-bottom: 2px solid #0056b3;
+            }
+
+            .panel-section-title {
+                font-size: 13.5px;
+                font-weight: bold;
+                color: #333333;
+                margin: 12px 0 6px 0;
+            }
+
             .dash-header {
-                font-size: 15px;
+                font-size: 14px;
                 font-weight: bold;
                 color: #0066b2;
                 border-bottom: 1px solid #e0e0e0;
-                padding-bottom: 8px;
-                margin-bottom: 10px;
+                padding-bottom: 6px;
+                margin: 12px 0 6px 0;
             }
 
             .dash-hint {
-                font-size: 11.5px;
+                font-size: 11px;
                 color: #666;
-                margin-bottom: 12px;
+                margin-bottom: 10px;
                 font-style: italic;
             }
 
             .chart-container {
                 position: relative;
                 width: 100%;
-                height: 200px;
-                margin-bottom: 12px;
+                height: 180px;
+                margin-bottom: 10px;
             }
 
             .popup-table {
@@ -440,10 +475,8 @@
                 <p class="map-subtitle">Infrastructure Exposure Modelling | Tongatapu - Tonga</p>
             </div>
 
-            <!-- Right Group: Updated Tonga NDRMO Official Logo -->
-            <div class="header-right-group">
-                <img src="https://scontent.fdet1-2.fna.fbcdn.net/v/t39.30808-6/434771690_233177325516336_2894194098921867119_n.jpg?_nc_cat=103&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=h_q5d_V8YxMQ7kNvgFvJg1P&_nc_zt=23&_nc_ht=scontent.fdet1-2.fna.fbcdn.net&oh=00_AYC3u82Y0J2Rz3zP92l8hZl9b1X2a3K4l5m6n7o8p9q0rA&oe=66E1D942" alt="Tonga NDRMO Logo" class="header-flag-right" title="National Disaster Risk Management Office (NDRMO) Tonga" onerror="this.onerror=null; this.src='https://upload.wikimedia.org/wikipedia/commons/9/9a/Flag_of_Tonga.svg';">
-            </div>
+            <!-- Right Group: Empty placeholder to maintain flex spacing -->
+            <div class="header-right-group" style="width: 45px;"></div>
         </header>
 
         <!-- Information Modal Popup -->
@@ -457,6 +490,7 @@
                     <ul>
                         <li><strong>Total Country Assets:</strong> Click the "Total Country Assets" button at the top of the sidebar panel anytime to pop up a comprehensive dashboard summary of all grids across the entire country.</li>
                         <li><strong>Selection Modes:</strong> Toggle between <em>Single Select</em> and <em>Multi-Select</em> mode on the map toolbar.</li>
+                        <li><strong>Swipe Tool:</strong> Click the "Enable Swipe" button to visually compare the Satellite imagery against the Asset Valuation layer using a side-by-side slider.</li>
                         <li><strong>Report Download:</strong> Use the <strong>"Download Report"</strong> button in the sidebar panel to export a formal valuation document titled <em>"Replacement Costs (USD)"</em> as a PDF including the national flag.</li>
                     </ul>
                     <div class="modal-note">
@@ -490,18 +524,28 @@
                     <button class="mode-btn" id="btn-mode-multi" title="Click multiple grids directly without holding Shift">Multi-Select</button>
                 </div>
 
+                <!-- Swipe Tool Toolbar -->
+                <div class="swipe-toolbar">
+                    <button class="mode-btn" id="btn-toggle-swipe" title="Toggle Side-by-Side Swipe Comparison">Enable Swipe</button>
+                </div>
+
                 <!-- Lower-Left Map Action Buttons -->
                 <div class="map-bottom-left-actions">
                     <button class="header-btn info-btn" id="infoBtn" title="How to Use the Map">ℹ</button>
                 </div>
             </div>
 
-            <!-- Original Right-Side Panel -->
+            <!-- Right-Side Panel with Clear Structured Headings -->
             <div class="dashboard-panel">
                 <div>
-                    <button class="header-btn" id="nationalSummaryBtn" title="View National Totals Across All Grids" style="width: 100%; margin-bottom: 15px; border-radius: 4px;">
+                    <h2 class="panel-main-title">Infrastructure Valuation Dashboard</h2>
+                    
+                    <div class="panel-section-title">National Summary Overview</div>
+                    <button class="header-btn" id="nationalSummaryBtn" title="View National Totals Across All Grids" style="width: 100%; margin-bottom: 12px; border-radius: 4px;">
                         <i class="fas fa-chart-pie"></i> Total Country Assets
                     </button>
+
+                    <div class="panel-section-title">Spatial Grid Selection Analysis</div>
                     <div class="dash-header" id="dash-title">Selection Summary (0 Grids)</div>
                     <div class="dash-hint" id="dash-hint-text">Click on map grids to select and calculate statistics.</div>
                     
@@ -511,6 +555,7 @@
                 </div>
 
                 <div>
+                    <div class="panel-section-title">Detailed Asset Breakdown Table</div>
                     <table class="popup-table" id="dash-table">
                         <tr><td colspan="2" style="text-align:center; color:#888;">No selection made</td></tr>
                     </table>
@@ -559,6 +604,9 @@
         <script src="js/leaflet-hash.js"></script>
         <script src="js/Autolinker.min.js"></script>
         <script src="js/rbush.min.js"></script>
+        
+        <!-- Leaflet Side-by-Side (Swipe) Plugin Script -->
+        <script src="https://cdn.jsdelivr.net/npm/leaflet-split-pane/leaflet-split-pane.js"></script>
         
         <!-- Data Import -->
         <script src="data/AssetsreplacementcostUSD_1.js"></script>
@@ -845,7 +893,37 @@
 
         map.addLayer(layer_AssetsreplacementcostUSD_1);
 
-        // 8. Initialize National Summary Modal Content
+        // 8. Swipe Control Setup (Leaflet Split-Pane / Side-by-Side)
+        var swipeControl = null;
+        var isSwipeActive = false;
+        var btnToggleSwipe = document.getElementById('btn-toggle-swipe');
+
+        btnToggleSwipe.onclick = function() {
+            if (!isSwipeActive) {
+                // Activate swipe: satellite on the left, vector layer on the right (or vice versa)
+                if (typeof L.control.splitPane === 'function') {
+                    swipeControl = L.control.splitPane(layer_ESRISatellite_0, layer_AssetsreplacementcostUSD_1).addTo(map);
+                } else if (typeof L.control.sideBySide === 'function') {
+                    swipeControl = L.control.sideBySide(layer_ESRISatellite_0, layer_AssetsreplacementcostUSD_1).addTo(map);
+                }
+                isSwipeActive = true;
+                btnToggleSwipe.classList.add('active');
+                btnToggleSwipe.innerText = 'Disable Swipe';
+            } else {
+                if (swipeControl) {
+                    swipeControl.remove();
+                    swipeControl = null;
+                }
+                isSwipeActive = false;
+                btnToggleSwipe.classList.remove('active');
+                btnToggleSwipe.innerText = 'Enable Swipe';
+                // Ensure layers are fully active in normal view
+                if (!map.hasLayer(layer_ESRISatellite_0)) map.addLayer(layer_ESRISatellite_0);
+                if (!map.hasLayer(layer_AssetsreplacementcostUSD_1)) map.addLayer(layer_AssetsreplacementcostUSD_1);
+            }
+        };
+
+        // 9. Initialize National Summary Modal Content
         function initNationalSummaryModal() {
             var modalTable = document.getElementById('national-modal-table');
             var globalTotals = {};
@@ -879,7 +957,7 @@
 
         initNationalSummaryModal();
 
-        // 9. Download PDF Report Functionality
+        // 10. Download PDF Report Functionality
         document.getElementById('btn-download-report').onclick = function() {
             var reportTableBody = document.getElementById('report-table-body');
             var scopeDesc = document.getElementById('report-scope-desc');
@@ -952,7 +1030,7 @@
             clearSelections();
         };
 
-        // 10. Layer Control Box
+        // 11. Layer Control Box
         var overlaysTree = [
             {
                 label: 'Assets replacement cost (USD)<br />' +
